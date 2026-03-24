@@ -17,7 +17,7 @@ spring:
     host: smtp.111.com
     port: 465
     username: AAZl3l4@111.com
-    password: iBU9QcEDzTjbt73h
+    password: 
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -30,7 +30,7 @@ spring:
   # AI配置 - GLM API
   ai:
     zhipuai:
-      api-key: 033fb7c42aa64b639060f739ee445cb2.VdeVZF1FsGa2gnwh
+      api-key: 
       base-url: https://open.bigmodel.cn/api/paas/v4
       chat:
         options:
