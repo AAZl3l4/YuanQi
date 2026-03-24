@@ -34,7 +34,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/user/register",
                         "/user/sendEmailCode",
                         "/file/**",
-                        "/error"
+                        "/error",
+                        "/message/stream"  // SSE接口在Controller中手动校验
                 );
 
         // Sa-Token拦截器2：开启注解鉴权（@SaCheckRole, @SaCheckPermission等）

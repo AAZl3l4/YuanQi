@@ -38,7 +38,7 @@ public class UserController {
      * 用户注册
      */
     @PostMapping("/register")
-    public Result<Void> register(@RequestBody @Validated UserDTO userDTO) {
+    public Result<Void> register(@RequestBody @Validated(UserDTO.Register.class) UserDTO userDTO) {
         userService.register(userDTO);
         return Result.success();
     }
@@ -47,7 +47,7 @@ public class UserController {
      * 用户登录（Token自动写入Cookie）
      */
     @PostMapping("/login")
-    public Result<Void> login(@RequestBody @Validated UserDTO userDTO) {
+    public Result<Void> login(@RequestBody @Validated(UserDTO.Login.class) UserDTO userDTO) {
         userService.login(userDTO);
         return Result.success();
     }

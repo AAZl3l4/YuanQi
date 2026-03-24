@@ -88,11 +88,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
         user.setPassword(userDTO.getPassword());
+        user.setApiKey(userDTO.getApiKey());
         user.setRole("user");
         user.setStatus(1);
 
         // 使用系统默认模型配置
-        user.setChatModel("glm-4.7-flash");
+        user.setChatModel("glm-4-flash-250414");
         user.setChatVisionModel("glm-4.6v-flash");
         user.setImageModel("cogview-3-flash");
         user.setVideoModel("cogvideo-x-flash");
@@ -110,6 +111,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void login(UserDTO userDTO) {
+        // 校验验证码 TODO 测试环境先注释
+//        String cacheCode = caffeineCache.getIfPresent("email:code:" + userDTO.getEmail());
+//        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
+//            throw new BusinessException("验证码错误或已过期");
+//        }
+
         // 查询用户
         User user = getOne(new LambdaQueryWrapper<User>().eq(User::getEmail, userDTO.getEmail()));
         if (user == null) {
@@ -129,6 +136,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 登录并缓存角色（Token自动写入Cookie）
         StpUtil.login(user.getId());
         StpUtil.getSession().set("role", user.getRole());
+
+        // 清除验证码
+        caffeineCache.invalidate("email:code:" + userDTO.getEmail());
 
         log.info("用户 {} 登录成功, 角色: {}", userDTO.getEmail(), user.getRole());
     }

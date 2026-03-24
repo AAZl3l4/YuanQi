@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     role VARCHAR(20) NOT NULL DEFAULT 'user' COMMENT '角色：admin-管理员 user-普通用户',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用 1-正常',
     api_key VARCHAR(255) DEFAULT NULL COMMENT '智谱AI API Key（加密存储）',
-    chat_model VARCHAR(50) DEFAULT 'glm-4.7-flash' COMMENT '文字聊天模型',
+    chat_model VARCHAR(50) DEFAULT 'glm-4-flash-250414' COMMENT '文字聊天模型',
     chat_vision_model VARCHAR(50) DEFAULT 'glm-4.6v-flash' COMMENT '图文聊天模型',
     image_model VARCHAR(50) DEFAULT 'cogview-3-flash' COMMENT '生图模型',
     video_model VARCHAR(50) DEFAULT 'cogvideo-x-flash' COMMENT '生视频模型',
@@ -29,23 +29,39 @@ CREATE TABLE IF NOT EXISTS sys_user (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
--- 对话记录表
-CREATE TABLE IF NOT EXISTS chat_history (
+-- 会话表
+CREATE TABLE IF NOT EXISTS chat_session (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
-    session_id VARCHAR(64) NOT NULL COMMENT '会话ID',
-    role VARCHAR(20) NOT NULL COMMENT '角色：user-用户 assistant-助手',
-    content TEXT NOT NULL COMMENT '对话内容',
-    model_used VARCHAR(50) DEFAULT NULL COMMENT '使用的模型',
-    tokens_used INT DEFAULT 0 COMMENT 'Token消耗数量',
+    session_id VARCHAR(64) NOT NULL COMMENT '会话唯一标识UUID',
+    title VARCHAR(200) DEFAULT NULL COMMENT '会话标题（首条消息自动生成）',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
+    UNIQUE KEY uk_session_id (session_id),
     INDEX idx_user_id (user_id),
-    INDEX idx_session_id (session_id),
     INDEX idx_create_time (create_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对话记录表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会话表';
+
+-- 对话消息表
+CREATE TABLE IF NOT EXISTS chat_message (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    session_id VARCHAR(64) NOT NULL COMMENT '会话ID',
+    role VARCHAR(20) NOT NULL COMMENT '角色：user-用户 assistant-助手 system-系统',
+    content TEXT NOT NULL COMMENT '消息内容',
+    model_used VARCHAR(50) DEFAULT NULL COMMENT '实际使用的模型（根据chat_type自动选择）',
+    tools_used JSON DEFAULT NULL COMMENT '使用的工具列表（JSON数组，空数组表示未使用）',
+    tool_results JSON DEFAULT NULL COMMENT '工具返回结果（JSON格式，包含每个工具的返回）',
+    input_tokens INT DEFAULT 0 COMMENT '输入Token数',
+    output_tokens INT DEFAULT 0 COMMENT '输出Token数',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    INDEX idx_session_id (session_id),
+    INDEX idx_role (role),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对话消息表';
 
 -- 知识库表
 CREATE TABLE IF NOT EXISTS knowledge_base (
