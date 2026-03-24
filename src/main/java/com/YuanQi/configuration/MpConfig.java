@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class MpConfig {
-    //分页插件暂时注释，后续根据MyBatis-Plus版本调整
+    //分页插件
      @Bean
      public MybatisPlusInterceptor mpInterceptor() {
          MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();

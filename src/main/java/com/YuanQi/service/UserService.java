@@ -2,7 +2,10 @@ package com.YuanQi.service;
 
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.UserDTO;
+import com.YuanQi.pojo.vo.OnlineUserVO;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
 
 /**
  * 用户服务（包含邮件发送和认证）
@@ -32,10 +35,15 @@ public interface UserService extends IService<User> {
     /**
      * 更新用户信息
      */
-    User updateUserInfo(User user);
+    User updateUser(User user);
 
     /**
      * 管理员修改用户信息
      */
     void adminUpdateUser(User user);
+
+    /**
+     * 获取在线用户列表
+     */
+    List<OnlineUserVO> listOnlineUsers();
 }

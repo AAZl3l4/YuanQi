@@ -4,8 +4,11 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.UserDTO;
+import com.YuanQi.pojo.vo.OnlineUserVO;
 import com.YuanQi.service.UserService;
 import com.YuanQi.utils.Result;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -61,9 +64,9 @@ public class UserController {
     /**
      * 更新用户信息
      */
-    @PutMapping("/info")
-    public Result<User> updateUserInfo(@RequestBody User user) {
-        User updatedUser = userService.updateUserInfo(user);
+    @PutMapping("/updata")
+    public Result<User> updateUser(@RequestBody User user) {
+        User updatedUser = userService.updateUser(user);
         return Result.success(updatedUser);
     }
 
@@ -81,11 +84,14 @@ public class UserController {
      */
     @SaCheckRole("admin")
     @GetMapping("/list")
-    public Result<List<User>> listUsers() {
-        List<User> users = userService.list();
+    public Result<IPage<User>> listUsers(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size) {
+        Page<User> pageParam = new Page<>(page, size);
+        IPage<User> userPage = userService.page(pageParam);
         // 清除密码
-        users.forEach(user -> user.setPassword(null));
-        return Result.success(users);
+        userPage.getRecords().forEach(user -> user.setPassword(null));
+        return Result.success(userPage);
     }
 
     /**
@@ -106,6 +112,27 @@ public class UserController {
     @DeleteMapping("/{userId}")
     public Result<Void> adminDeleteUser(@PathVariable Long userId) {
         userService.removeById(userId);
+        return Result.success();
+    }
+
+    /**
+     * 获取在线用户列表（管理员）
+     */
+    @SaCheckRole("admin")
+    @GetMapping("/online")
+    public Result<List<OnlineUserVO>> listOnlineUsers() {
+        List<OnlineUserVO> onlineUsers = userService.listOnlineUsers();
+        return Result.success(onlineUsers);
+    }
+
+    /**
+     * 踢出指定用户（管理员）
+     */
+    @SaCheckRole("admin")
+    @PostMapping("/kickout/{userId}")
+    public Result<Void> kickoutUser(@PathVariable Long userId) {
+        // 强制下线该用户
+        StpUtil.logout(userId);
         return Result.success();
     }
 }

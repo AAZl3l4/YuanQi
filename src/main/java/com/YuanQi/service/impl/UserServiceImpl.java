@@ -1,13 +1,15 @@
 package com.YuanQi.service.impl;
 
+import cn.dev33.satoken.session.SaSession;
+import cn.dev33.satoken.session.SaTerminalInfo;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.YuanQi.mapper.UserMapper;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.UserDTO;
+import com.YuanQi.pojo.vo.OnlineUserVO;
 import com.YuanQi.service.UserService;
 import com.YuanQi.utils.BusinessException;
-import com.YuanQi.utils.CryptoUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -17,6 +19,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 用户服务实现（包含邮件发送和认证）
@@ -115,9 +121,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException("账号已被禁用");
         }
 
-        // 校验密码（加密后对比）
-        String encryptedPassword = CryptoUtil.encrypt(userDTO.getPassword());
-        if (!encryptedPassword.equals(user.getPassword())) {
+        // 校验密码（MybatisPlus自动解密）
+        if (!userDTO.getPassword().equals(user.getPassword())) {
             throw new BusinessException("密码错误");
         }
 
@@ -147,7 +152,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * 更新用户信息
      */
     @Override
-    public User updateUserInfo(User user) {
+    public User updateUser(User user) {
         Long userId = StpUtil.getLoginIdAsLong();
 
         User existUser = getById(userId);
@@ -176,5 +181,56 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         updateById(user);
+    }
+
+    /**
+     * 获取在线用户列表
+     */
+    @Override
+    public List<OnlineUserVO> listOnlineUsers() {
+        List<OnlineUserVO> onlineUsers = new ArrayList<>();
+
+        // 获取所有登录的会话ID
+        List<String> sessionIds = StpUtil.searchSessionId("", 0, -1, true);
+        for (String sessionId : sessionIds) {
+            SaSession session = StpUtil.getSessionBySessionId(sessionId);
+            if (session == null) continue;
+
+            // 获取登录ID
+            Object loginIdObj = session.getLoginId();
+            if (loginIdObj == null) continue;
+
+            Long loginId;
+            try {
+                loginId = Long.parseLong(loginIdObj.toString());
+            } catch (NumberFormatException e) {
+                continue;
+            }
+
+            if (loginId == 0) continue;
+
+            // 获取用户信息
+            User user = getById(loginId);
+            if (user == null) continue;
+
+            // 获取登录终端信息
+            List<SaTerminalInfo> terminalList = StpUtil.getTerminalListByLoginId(loginId);
+            for (SaTerminalInfo terminal : terminalList) {
+                OnlineUserVO vo = new OnlineUserVO();
+                vo.setId(loginId);
+                vo.setUsername(user.getUsername());
+                vo.setEmail(user.getEmail());
+                vo.setAvatar(user.getAvatar());
+                vo.setRole(user.getRole());
+                vo.setIndex(terminal.getIndex());
+                vo.setDeviceType(terminal.getDeviceType());
+                vo.setTokenValue(terminal.getTokenValue());
+                vo.setCreateTime(new Date(terminal.getCreateTime()));
+                vo.setDeviceId(terminal.getDeviceId());
+                onlineUsers.add(vo);
+            }
+        }
+
+        return onlineUsers;
     }
 }
