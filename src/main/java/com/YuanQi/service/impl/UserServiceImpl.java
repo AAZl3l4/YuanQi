@@ -44,6 +44,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Value("${yuanqi.email.code-length}")
     private Integer codeLength;
 
+    @Value("${yuanqi.default-models.chat}")
+    private String defaultChatModel;
+
+    @Value("${yuanqi.default-models.chat-vision}")
+    private String defaultChatVisionModel;
+
+    @Value("${yuanqi.default-models.image}")
+    private String defaultImageModel;
+
+    @Value("${yuanqi.default-models.video}")
+    private String defaultVideoModel;
+
     /**
      * 发送邮箱验证码
      */
@@ -93,10 +105,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setStatus(1);
 
         // 使用系统默认模型配置
-        user.setChatModel("glm-4-flash-250414");
-        user.setChatVisionModel("glm-4.6v-flash");
-        user.setImageModel("cogview-3-flash");
-        user.setVideoModel("cogvideo-x-flash");
+        user.setChatModel(defaultChatModel);
+        user.setChatVisionModel(defaultChatVisionModel);
+        user.setImageModel(defaultImageModel);
+        user.setVideoModel(defaultVideoModel);
 
         save(user);
 

@@ -12,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import jakarta.validation.ConstraintViolationException;
 
@@ -95,6 +96,28 @@ public class GlobalExceptionHandler {
     public Result<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         log.warn("请求方法不支持: {}", ex.getMessage());
         return Result.error(405, "请求方法不支持: " + ex.getMethod());
+    }
+
+    /**
+     * API限流异常处理（429）
+     */
+    @ExceptionHandler(WebClientResponseException.TooManyRequests.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public Result<Void> handleTooManyRequests(WebClientResponseException.TooManyRequests ex) {
+        log.warn("API请求过于频繁: {}", ex.getMessage());
+        return Result.error(429, "AI服务请求过于频繁，请稍后再试");
+    }
+
+    /**
+     * WebClient响应异常处理
+     */
+    @ExceptionHandler(WebClientResponseException.class)
+    public Result<Void> handleWebClientResponseException(WebClientResponseException ex) {
+        log.error("AI服务调用异常: status={}, message={}", ex.getStatusCode(), ex.getMessage());
+        if (ex.getStatusCode().value() == 429) {
+            return Result.error(429, "AI服务请求过于频繁，请稍后再试");
+        }
+        return Result.error("AI服务调用失败: " + ex.getStatusText());
     }
 
     /**

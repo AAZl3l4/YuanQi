@@ -1,6 +1,7 @@
 package com.YuanQi.service;
 
 import com.YuanQi.pojo.ChatMessage;
+import com.YuanQi.pojo.dto.ChatDTO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -16,6 +17,7 @@ public interface MessageService {
 
     /**
      * 发送消息并获取流式响应（SSE）
+     * @param chatDTO 聊天请求DTO
      */
-    SseEmitter chat(String sessionId, String message);
+    SseEmitter chat(ChatDTO chatDTO);
 }

@@ -3,8 +3,8 @@ package com.YuanQi.service.impl;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.pojo.ChatMessage;
-import com.YuanQi.pojo.ChatSession;
 import com.YuanQi.pojo.User;
+import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.service.MessageService;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.service.UserService;
@@ -20,10 +20,15 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.content.Media;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -60,36 +65,40 @@ public class MessageServiceImpl implements MessageService {
      * 发送消息并获取流式响应（SSE）
      */
     @Override
-    public SseEmitter chat(String sessionId, String message) {
-        ChatSession session = sessionService.checkSessionOwner(sessionId);
+    public SseEmitter chat(ChatDTO chatDTO) {
+        String sessionId = chatDTO.getSessionId();
+        String message = chatDTO.getMessage();
+        String imageUrl = chatDTO.getImageUrl();
+
+        sessionService.checkSessionOwner(sessionId);
         User user = userService.getCurrentUser();
 
         if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
             throw new BusinessException("请先配置API Key");
         }
+        String apiKey = user.getApiKey();
+
+        // 根据是否带图选择模型
+        String model = (imageUrl != null && !imageUrl.isEmpty()) ? user.getChatVisionModel() : user.getChatModel();
 
         // 保存用户消息
         ChatMessage userMessage = new ChatMessage();
         userMessage.setSessionId(sessionId);
         userMessage.setRole("user");
         userMessage.setContent(message);
-        userMessage.setModelUsed(user.getChatModel());
+        userMessage.setModelUsed(model);
         chatMessageMapper.insert(userMessage);
 
         // 构建消息历史
-        List<Message> messages = buildMessageHistory(sessionId, message);
-
-        // 提取需要在异步线程中使用的数据
-        String apiKey = user.getApiKey();
-        String chatModel = user.getChatModel();;
+        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl);
 
         SseEmitter emitter = new SseEmitter(300000L);
-        log.info("开始对话: sessionId={}, model={}", sessionId, chatModel);
+        log.info("开始对话: sessionId={}, hasImage={}, model={}", sessionId, imageUrl != null, model);
 
         CompletableFuture.runAsync(() -> {
             try {
-                // 创建动态ChatClient（使用用户的API Key）
-                ChatClient chatClient = springAiConfig.createChatClient(apiKey, chatModel);
+                // 创建动态ChatClient（使用用户的API Key和选择的模型）
+                ChatClient chatClient = springAiConfig.createChatClient(apiKey, model);
 
                 // 流式调用
                 Flux<ChatResponse> stream = chatClient.prompt()
@@ -136,7 +145,7 @@ public class MessageServiceImpl implements MessageService {
                             int estimatedOutputTokens = TokenUtil.estimateTokens(fullResponse.toString());
                             log.debug("估算输出Token: {}", estimatedOutputTokens);
                             // 保存AI回复（携带Token统计）
-                            saveAssistantMessage(sessionId, fullResponse.toString(), chatModel, estimatedInputTokens, estimatedOutputTokens);
+                            saveAssistantMessage(sessionId, fullResponse.toString(), model, estimatedInputTokens, estimatedOutputTokens);
                             try {
                                 emitter.send(SseEmitter.event()
                                         .name("complete")
@@ -167,7 +176,7 @@ public class MessageServiceImpl implements MessageService {
     /**
      * 构建消息历史上下文
      */
-    private List<Message> buildMessageHistory(String sessionId, String currentMessage) {
+    private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl) {
         List<Message> messages = new ArrayList<>();
 
         // 获取最近20条历史消息作为上下文
@@ -189,8 +198,27 @@ public class MessageServiceImpl implements MessageService {
             }
         }
 
-        // 添加当前消息
-        messages.add(new UserMessage(currentMessage));
+        // 根据是否带图构建当前消息
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            // 图文消息：带图片的UserMessage
+            try {
+                Media imageMedia = Media.builder()
+                        .mimeType(MimeTypeUtils.IMAGE_JPEG)
+                        .data(new UrlResource(new URL(imageUrl)))
+                        .build();
+                messages.add(UserMessage.builder()
+                        .text(currentMessage)
+                        .media(imageMedia)
+                        .build());
+            } catch (MalformedURLException e) {
+                log.error("图片URL格式错误: {}", imageUrl, e);
+                // URL错误时退化为纯文本消息
+                messages.add(new UserMessage(currentMessage));
+            }
+        } else {
+            // 纯文本消息
+            messages.add(new UserMessage(currentMessage));
+        }
 
         return messages;
     }
