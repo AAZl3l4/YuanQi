@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.GeneratedContentMapper">
+
+    <!-- 分页查询生成内容 -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.GeneratedContent">
+        SELECT
+            gc.id,
+            gc.user_id as userId,
+            u.username as username,
+            gc.type,
+            gc.prompt,
+            gc.result_url as resultUrl,
+            gc.cover_url as coverUrl,
+            gc.task_id as taskId,
+            gc.status,
+            gc.error_msg as errorMsg,
+            gc.model_used as modelUsed,
+            gc.deleted as deleted,
+            gc.create_time as createTime,
+            gc.update_time as updateTime
+        FROM ai_generated_content gc
+        LEFT JOIN sys_user u ON gc.user_id = u.id
+        WHERE u.deleted = 0
+        <if test="userId != null">
+            AND gc.user_id = #{userId}
+        </if>
+        <if test="type != null and type != ''">
+            AND gc.type = #{type}
+        </if>
+        <if test="status != null">
+            AND gc.status = #{status}
+        </if>
+        ORDER BY gc.create_time DESC
+    </select>
+
+</mapper>

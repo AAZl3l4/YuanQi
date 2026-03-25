@@ -12,5 +12,5 @@ public interface GeneratedContentService extends IService<GeneratedContent> {
     /**
      * 分页查询生成内容
      */
-    IPage<GeneratedContent> pageList(Integer page, Integer size, String type, Integer status);
+    IPage<GeneratedContent> pageList(Integer page, Integer size, Long userId, String type, Integer status);
 }

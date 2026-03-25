@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.UsageMapper">
+
+    <!-- 查询用量统计 -->
+    <select id="selectUsage" resultType="com.YuanQi.pojo.vo.UsageVO">
+        SELECT
+            COALESCE(COUNT(cm.id), 0) as chatCount,
+            COALESCE(SUM(cm.input_tokens), 0) as inputTokens,
+            COALESCE(SUM(cm.output_tokens), 0) as outputTokens,
+            COALESCE(SUM(CASE WHEN gc.type = 'image' THEN 1 ELSE 0 END), 0) as imageCount,
+            COALESCE(SUM(CASE WHEN gc.type = 'video' THEN 1 ELSE 0 END), 0) as videoCount
+        FROM sys_user u
+        LEFT JOIN chat_session cs ON u.id = cs.user_id
+        LEFT JOIN chat_message cm ON cs.session_id = cm.session_id AND cm.role = 'assistant'
+            AND DATE(cm.create_time) BETWEEN #{startDate} AND #{endDate}
+        LEFT JOIN ai_generated_content gc ON u.id = gc.user_id AND gc.status = 1
+            AND DATE(gc.create_time) BETWEEN #{startDate} AND #{endDate}
+        WHERE u.deleted = 0
+        <if test="userId != null">
+            AND u.id = #{userId}
+        </if>
+    </select>
+
+</mapper>

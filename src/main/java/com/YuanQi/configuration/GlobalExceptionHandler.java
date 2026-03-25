@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolationException;
 
@@ -96,6 +97,16 @@ public class GlobalExceptionHandler {
     public Result<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         log.warn("请求方法不支持: {}", ex.getMessage());
         return Result.error(405, "请求方法不支持: " + ex.getMethod());
+    }
+
+    /**
+     * 静态资源未找到异常（404）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Result<Void> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("资源未找到: {}", ex.getMessage());
+        return Result.error(404, "请求的资源不存在");
     }
 
     /**

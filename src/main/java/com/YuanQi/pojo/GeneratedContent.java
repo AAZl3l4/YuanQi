@@ -20,6 +20,12 @@ public class GeneratedContent extends BaseEntity {
     private Long userId;
 
     /**
+     * 用户名（展示用，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String username;
+
+    /**
      * 类型：image-图片 video-视频
      */
     @TableField("type")

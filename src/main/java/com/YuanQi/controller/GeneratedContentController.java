@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
  * 管理员-生成内容管理控制器
  */
 @RestController
-@RequestMapping("/admin/content")
+@RequestMapping("/content")
 @RequiredArgsConstructor
 public class GeneratedContentController {
 
@@ -26,9 +26,10 @@ public class GeneratedContentController {
     public Result<IPage<GeneratedContent>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer status) {
-        IPage<GeneratedContent> result = generatedContentService.pageList(page, size, type, status);
+        IPage<GeneratedContent> result = generatedContentService.pageList(page, size, userId, type, status);
         return Result.success(result);
     }
 
