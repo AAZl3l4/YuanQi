@@ -1,9 +1,12 @@
 package com.YuanQi.configuration;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.zhipuai.ZhiPuAiChatModel;
 import org.springframework.ai.zhipuai.ZhiPuAiChatOptions;
+import org.springframework.ai.zhipuai.ZhiPuAiImageModel;
 import org.springframework.ai.zhipuai.api.ZhiPuAiApi;
+import org.springframework.ai.zhipuai.api.ZhiPuAiImageApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,5 +35,13 @@ public class SpringAiConfig {
 
         ZhiPuAiChatModel chatModel = new ZhiPuAiChatModel(zhiPuAiApi, options);
         return ChatClient.create(chatModel);
+    }
+
+    /**
+     * 根据用户API Key创建 ImageModel
+     */
+    public ImageModel createImageModel(String apiKey) {
+        ZhiPuAiImageApi zhiPuAiImageApi = new ZhiPuAiImageApi(apiKey);
+        return new ZhiPuAiImageModel(zhiPuAiImageApi);
     }
 }

@@ -5,6 +5,7 @@ import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.ChatDTO;
+import com.YuanQi.pojo.dto.ImageDTO;
 import com.YuanQi.service.MessageService;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.service.UserService;
@@ -21,6 +22,10 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.image.ImageModel;
+import org.springframework.ai.image.ImageOptionsBuilder;
+import org.springframework.ai.image.ImagePrompt;
+import org.springframework.ai.image.ImageResponse;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
@@ -107,7 +112,7 @@ public class MessageServiceImpl implements MessageService {
                         .chatResponse(); // 获取 ChatResponse 流
 
                 StringBuilder fullResponse = new StringBuilder();
-                // 使用TikToken估算输入Token（历史消息 + 当前消息）
+                // 使用Tik Token估算输入Token（历史消息 + 当前消息）
                 int estimatedInputTokens = TokenUtil.estimateTokens(
                         messages.stream().map(Message::getText).toList()
                 );
@@ -237,5 +242,46 @@ public class MessageServiceImpl implements MessageService {
         chatMessageMapper.insert(assistantMessage);
         log.info("保存AI回复: sessionId={}, length={}, inputTokens={}, outputTokens={}",
                 sessionId, content.length(), inputTokens, outputTokens);
+    }
+
+    /**
+     * 生成图片
+     */
+    @Override
+    public String generateImage(ImageDTO imageDTO) {
+        User user = userService.getCurrentUser();
+
+        if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
+            throw new BusinessException("请先配置API Key");
+        }
+
+        String apiKey = user.getApiKey();
+        String model = user.getImageModel();
+        log.info("开始生成图片: model={}, prompt={}", model, imageDTO.getPrompt());
+
+        // 创建ImageModel
+        ImageModel imageModel = springAiConfig.createImageModel(apiKey);
+
+        // 构建图片选项
+        ImageOptionsBuilder optionsBuilder = ImageOptionsBuilder.builder()
+                .model(model);
+        
+        // 设置尺寸（可选）
+        if (imageDTO.getSize() != null && !imageDTO.getSize().isEmpty()) {
+            String[] sizeParts = imageDTO.getSize().split("x");
+            optionsBuilder.width(Integer.parseInt(sizeParts[0]))
+                    .height(Integer.parseInt(sizeParts[1]));
+        }
+
+        // 调用生图API
+        ImageResponse response = imageModel.call(
+                new ImagePrompt(imageDTO.getPrompt(), optionsBuilder.build())
+        );
+
+        // 获取图片URL
+        String imageUrl = response.getResult().getOutput().getUrl();
+        log.info("图片生成成功: url={}", imageUrl);
+
+        return imageUrl;
     }
 }

@@ -3,6 +3,7 @@ package com.YuanQi.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.dto.ChatDTO;
+import com.YuanQi.pojo.dto.ImageDTO;
 import com.YuanQi.service.MessageService;
 import com.YuanQi.utils.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -58,5 +59,15 @@ public class MessageController {
 
         // 登录校验通过，调用服务
         return messageService.chat(chatDTO);
+    }
+
+    /**
+     * 生成图片 返回图片URL(30天有效期)
+     */
+    @PostMapping("/image")
+    public Result<String> generateImage(@Validated @RequestBody ImageDTO imageDTO) {
+        StpUtil.checkLogin();
+        String imageUrl = messageService.generateImage(imageDTO);
+        return Result.success(imageUrl);
     }
 }

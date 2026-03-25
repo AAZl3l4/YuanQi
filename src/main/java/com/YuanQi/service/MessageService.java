@@ -2,6 +2,7 @@ package com.YuanQi.service;
 
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.dto.ChatDTO;
+import com.YuanQi.pojo.dto.ImageDTO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -20,4 +21,11 @@ public interface MessageService {
      * @param chatDTO 聊天请求DTO
      */
     SseEmitter chat(ChatDTO chatDTO);
+
+    /**
+     * 生成图片
+     * @param imageDTO 生图请求DTO
+     * @return 图片URL
+     */
+    String generateImage(ImageDTO imageDTO);
 }
