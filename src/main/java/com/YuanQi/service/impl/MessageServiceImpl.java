@@ -94,13 +94,19 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         String imageUrl = chatDTO.getImageUrl();
         Integer contextRounds = chatDTO.getContextRounds();
 
-        sessionService.checkSessionOwner(sessionId);
+        Boolean isFirstMessage = sessionService.checkSessionFirstMessage(sessionId);
         User user = userService.getCurrentUser();
 
         if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
             throw new BusinessException("请先配置API Key");
         }
         String apiKey = user.getApiKey();
+
+        // 首次对话，自动生成会话标题
+        if (isFirstMessage) {
+            String title = generateSessionTitle(apiKey, user.getChatModel(), message);
+            sessionService.updateSessionTitle(sessionId, title);
+        }
 
         // 根据是否带图选择模型
         String model = (imageUrl != null && !imageUrl.isEmpty()) ? user.getChatVisionModel() : user.getChatModel();
@@ -429,5 +435,34 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
 
         return vo;
+    }
+
+    /**
+     * 生成会话标题（使用AI根据用户第一条消息生成简短标题）
+     */
+    private String generateSessionTitle(String apiKey, String model, String message) {
+        try {
+            ChatClient chatClient = springAiConfig.createChatClient(apiKey, model);
+
+            String prompt = "请根据用户消息，生成一个简短的能概括对话主题的会话标题（不超过10个字）。只返回标题内容，不要有任何解释。";
+
+            String title = chatClient.prompt()
+                    .system(prompt)
+                    .user(message)
+                    .call()
+                    .content();
+
+            // 清理标题（去除引号、换行等）
+            title = title.replace("\"", "").replace("'", "").trim();
+            if (title.length() > 20) {
+                title = title.substring(0, 20);
+            }
+
+            log.info("生成会话标题: {}", title);
+            return title.isEmpty() ? "新会话" : title;
+        } catch (Exception e) {
+            log.warn("生成会话标题失败，使用默认标题: {}", e.getMessage());
+            return message.length() > 20 ? message.substring(0, 20) : message;
+        }
     }
 }

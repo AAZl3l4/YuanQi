@@ -33,4 +33,9 @@ public interface SessionService extends IService<ChatSession> {
      * 验证会话归属并返回会话
      */
     ChatSession checkSessionOwner(String sessionId);
+
+    /**
+     * 验证会话归属，并检测是否是首次对话
+     */
+    Boolean checkSessionFirstMessage(String sessionId);
 }

@@ -111,4 +111,20 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
 
         return session;
     }
+
+    /**
+     * 验证会话归属并且验证是否是首次对话
+     */
+    @Override
+    public Boolean checkSessionFirstMessage(String sessionId) {
+        checkSessionOwner(sessionId);
+
+        // 查询该会话是否有消息
+        Long messageCount = chatMessageMapper.selectCount(
+                new LambdaQueryWrapper<ChatMessage>()
+                        .eq(ChatMessage::getSessionId, sessionId)
+        );
+
+        return messageCount == 0;
+    }
 }

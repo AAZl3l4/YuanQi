@@ -66,7 +66,6 @@ public class MessageController {
      */
     @PostMapping("/image")
     public Result<String> generateImage(@Validated @RequestBody ImageDTO imageDTO) {
-        StpUtil.checkLogin();
         String imageUrl = messageService.generateImage(imageDTO);
         return Result.success(imageUrl);
     }
@@ -76,7 +75,6 @@ public class MessageController {
      */
     @PostMapping("/video")
     public Result<String> submitVideoTask(@Validated @RequestBody VideoDTO videoDTO) {
-        StpUtil.checkLogin();
         String taskId = messageService.submitVideoTask(videoDTO);
         return Result.success(taskId);
     }
@@ -86,7 +84,6 @@ public class MessageController {
      */
     @GetMapping("/video/{taskId}")
     public Result<VideoTaskVO> queryVideoTask(@PathVariable String taskId) {
-        StpUtil.checkLogin();
         VideoTaskVO result = messageService.queryVideoTask(taskId);
         return Result.success(result);
     }

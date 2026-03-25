@@ -13,4 +13,9 @@ public interface GeneratedContentService extends IService<GeneratedContent> {
      * 分页查询生成内容
      */
     IPage<GeneratedContent> pageList(Integer page, Integer size, Long userId, String type, Integer status);
+
+    /**
+     * 删除指定用户的生成内容
+     */
+    void deleteByIdAndUserId(Long id, Long userId);
 }
