@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.content.Media;
@@ -91,6 +92,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         String sessionId = chatDTO.getSessionId();
         String message = chatDTO.getMessage();
         String imageUrl = chatDTO.getImageUrl();
+        Integer contextRounds = chatDTO.getContextRounds();
 
         sessionService.checkSessionOwner(sessionId);
         User user = userService.getCurrentUser();
@@ -112,7 +114,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         chatMessageMapper.insert(userMessage);
 
         // 构建消息历史
-        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl);
+        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, contextRounds);
 
         SseEmitter emitter = new SseEmitter(300000L);
         log.info("开始对话: sessionId={}, hasImage={}, model={}", sessionId, imageUrl != null, model);
@@ -190,11 +192,18 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     /**
      * 构建消息历史上下文
      */
-    private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl) {
+    private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl, Integer contextRounds) {
         List<Message> messages = new ArrayList<>();
 
-        // 获取最近20条历史消息作为上下文
-        Page<ChatMessage> page = new Page<>(1, 20);
+        // 添加系统提示词
+        messages.add(new SystemMessage(
+                "你是元启AI助手的智能助手。元启AI是一个集成多种AI能力的智能对话平台，" +
+                "支持文字对话、图文理解、图像生成、视频生成等多种功能。请用简洁友好的方式回答用户问题。"
+        ));
+
+        // 根据轮数计算消息条数（1轮=2条消息）
+        int messageLimit = contextRounds * 2;
+        Page<ChatMessage> page = new Page<>(1, messageLimit);
         IPage<ChatMessage> history = chatMessageMapper.selectPage(page,
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getSessionId, sessionId)
