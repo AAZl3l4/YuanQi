@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     chat_model VARCHAR(50) DEFAULT 'glm-4-flash-250414' COMMENT '文字聊天模型',
     chat_vision_model VARCHAR(50) DEFAULT 'glm-4v-flash' COMMENT '图文聊天模型',
     image_model VARCHAR(50) DEFAULT 'cogview-3-flash' COMMENT '生图模型',
-    video_model VARCHAR(50) DEFAULT 'cogvideo-x-flash' COMMENT '生视频模型',
+    video_model VARCHAR(50) DEFAULT 'cogvideox-flash' COMMENT '生视频模型',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -115,3 +115,26 @@ CREATE TABLE IF NOT EXISTS usage_stats (
     INDEX idx_user_id (user_id),
     INDEX idx_stats_date (stats_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用量统计表';
+
+-- AI生成内容记录表（图片/视频）
+CREATE TABLE IF NOT EXISTS ai_generated_content (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    type VARCHAR(20) NOT NULL COMMENT '类型：image-图片 video-视频',
+    prompt VARCHAR(1000) NOT NULL COMMENT '提示词',
+    result_url VARCHAR(500) DEFAULT NULL COMMENT '生成结果URL（图片/视频）',
+    cover_url VARCHAR(500) DEFAULT NULL COMMENT '封面图URL（视频专用）',
+    task_id VARCHAR(100) DEFAULT NULL COMMENT '异步任务ID（视频专用）',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-处理中 1-成功 2-失败',
+    error_msg VARCHAR(500) DEFAULT NULL COMMENT '错误信息（失败时）',
+    model_used VARCHAR(50) DEFAULT NULL COMMENT '使用的模型',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_type (type),
+    INDEX idx_status (status),
+    INDEX idx_task_id (task_id),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI生成内容记录表';

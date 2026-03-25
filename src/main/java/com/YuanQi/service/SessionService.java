@@ -2,11 +2,12 @@ package com.YuanQi.service;
 
 import com.YuanQi.pojo.ChatSession;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * 会话服务接口
  */
-public interface SessionService {
+public interface SessionService extends IService<ChatSession> {
 
     /**
      * 创建新会话

@@ -4,6 +4,8 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.pojo.dto.ImageDTO;
+import com.YuanQi.pojo.dto.VideoDTO;
+import com.YuanQi.pojo.vo.VideoTaskVO;
 import com.YuanQi.service.MessageService;
 import com.YuanQi.utils.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -47,9 +49,7 @@ public class MessageController {
             StpUtil.checkLogin();
         } catch (Exception e) {
             try {
-                emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data("请先登录"));
+                emitter.send(SseEmitter.event().name("error").data("请先登录"));
                 emitter.complete();
             } catch (Exception ex) {
                 emitter.completeWithError(ex);
@@ -69,5 +69,25 @@ public class MessageController {
         StpUtil.checkLogin();
         String imageUrl = messageService.generateImage(imageDTO);
         return Result.success(imageUrl);
+    }
+
+    /**
+     * 提交视频生成任务（异步）返回任务ID
+     */
+    @PostMapping("/video")
+    public Result<String> submitVideoTask(@Validated @RequestBody VideoDTO videoDTO) {
+        StpUtil.checkLogin();
+        String taskId = messageService.submitVideoTask(videoDTO);
+        return Result.success(taskId);
+    }
+
+    /**
+     * 查询视频任务结果
+     */
+    @GetMapping("/video/{taskId}")
+    public Result<VideoTaskVO> queryVideoTask(@PathVariable String taskId) {
+        StpUtil.checkLogin();
+        VideoTaskVO result = messageService.queryVideoTask(taskId);
+        return Result.success(result);
     }
 }

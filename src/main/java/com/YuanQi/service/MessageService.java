@@ -3,13 +3,16 @@ package com.YuanQi.service;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.pojo.dto.ImageDTO;
+import com.YuanQi.pojo.dto.VideoDTO;
+import com.YuanQi.pojo.vo.VideoTaskVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 消息服务接口
  */
-public interface MessageService {
+public interface MessageService extends IService<ChatMessage> {
 
     /**
      * 获取会话历史消息（分页）
@@ -28,4 +31,14 @@ public interface MessageService {
      * @return 图片URL
      */
     String generateImage(ImageDTO imageDTO);
+
+    /**
+     * 提交视频生成任务（异步）
+     */
+    String submitVideoTask(VideoDTO videoDTO);
+
+    /**
+     * 查询视频任务结果
+     */
+    VideoTaskVO queryVideoTask(String taskId);
 }

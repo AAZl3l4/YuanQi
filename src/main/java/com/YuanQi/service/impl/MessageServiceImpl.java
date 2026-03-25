@@ -1,19 +1,29 @@
 package com.YuanQi.service.impl;
 
+import cn.hutool.http.HttpRequest;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ChatMessageMapper;
+import com.YuanQi.mapper.GeneratedContentMapper;
 import com.YuanQi.pojo.ChatMessage;
+import com.YuanQi.pojo.GeneratedContent;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.pojo.dto.ImageDTO;
+import com.YuanQi.pojo.dto.VideoDTO;
+import com.YuanQi.pojo.vo.VideoTaskVO;
 import com.YuanQi.service.MessageService;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.service.UserService;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -26,6 +36,7 @@ import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImageOptionsBuilder;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeTypeUtils;
@@ -35,7 +46,9 @@ import reactor.core.publisher.Flux;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -44,12 +57,16 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MessageServiceImpl implements MessageService {
+public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage> implements MessageService {
 
     private final ChatMessageMapper chatMessageMapper;
+    private final GeneratedContentMapper generatedContentMapper;
     private final SessionService sessionService;
     private final UserService userService;
     private final SpringAiConfig springAiConfig;
+
+    @Value("${spring.ai.zhipuai.base-url}")
+    private String zhipuBaseUrl;
 
     /**
      * 获取会话历史消息（分页）
@@ -125,9 +142,7 @@ public class MessageServiceImpl implements MessageService {
                                 String content = response.getResult().getOutput().getText();
                                 if (content != null && !content.isEmpty()) {
                                     fullResponse.append(content);
-                                    emitter.send(SseEmitter.event()
-                                            .name("message")
-                                            .data(content));
+                                    emitter.send(SseEmitter.event().name("message").data(content));
                                 }
 
                             } catch (Exception e) {
@@ -137,9 +152,7 @@ public class MessageServiceImpl implements MessageService {
                         error -> { // 发生错误时执行
                             log.error("流式对话失败", error);
                             try {
-                                emitter.send(SseEmitter.event()
-                                        .name("error")
-                                        .data("对话失败: " + error.getMessage()));
+                                emitter.send(SseEmitter.event().name("error").data("对话失败: " + error.getMessage()));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -152,9 +165,7 @@ public class MessageServiceImpl implements MessageService {
                             // 保存AI回复（携带Token统计）
                             saveAssistantMessage(sessionId, fullResponse.toString(), model, estimatedInputTokens, estimatedOutputTokens);
                             try {
-                                emitter.send(SseEmitter.event()
-                                        .name("complete")
-                                        .data("done"));
+                                emitter.send(SseEmitter.event().name("complete").data("done"));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -165,9 +176,7 @@ public class MessageServiceImpl implements MessageService {
             } catch (Exception e) {
                 log.error("对话处理失败", e);
                 try {
-                    emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("系统错误: " + e.getMessage()));
+                    emitter.send(SseEmitter.event().name("error").data("系统错误: " + e.getMessage()));
                     emitter.complete();
                 } catch (Exception ex) {
                     emitter.completeWithError(ex);
@@ -274,14 +283,142 @@ public class MessageServiceImpl implements MessageService {
         }
 
         // 调用生图API
-        ImageResponse response = imageModel.call(
-                new ImagePrompt(imageDTO.getPrompt(), optionsBuilder.build())
-        );
-
+        ImageResponse response = imageModel.call(new ImagePrompt(imageDTO.getPrompt(), optionsBuilder.build()));
         // 获取图片URL
         String imageUrl = response.getResult().getOutput().getUrl();
-        log.info("图片生成成功: url={}", imageUrl);
 
-        return imageUrl;
+        GeneratedContent content = new GeneratedContent();
+        content.setUserId(user.getId());
+        content.setType("image");
+        content.setPrompt(imageDTO.getPrompt());
+        content.setResultUrl(imageUrl);
+        content.setModelUsed(model);
+
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            log.error("图片生成失败: {}", response);
+            // 保存失败记录到数据库
+            content.setStatus(2);
+            content.setErrorMsg(response.toString());
+            generatedContentMapper.insert(content);
+            throw new BusinessException("图片生成失败，请重试");
+        }else{
+            log.info("图片生成成功: url={}", imageUrl);
+            // 保存生成记录到数据库
+            content.setStatus(1);
+            generatedContentMapper.insert(content);
+            return imageUrl;
+        }
+    }
+
+    /**
+     * 提交视频生成任务（异步）
+     */
+    @Override
+    public String submitVideoTask(VideoDTO videoDTO) {
+        User user = userService.getCurrentUser();
+
+        if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
+            throw new BusinessException("请先配置API Key");
+        }
+
+        String apiKey = user.getApiKey();
+        String model = user.getVideoModel();
+        log.info("提交视频生成任务: model={}, prompt={}", model, videoDTO.getPrompt());
+
+        // 构建请求体
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("prompt", videoDTO.getPrompt());
+        requestBody.put("quality", videoDTO.getQuality());
+        requestBody.put("size", videoDTO.getSize());
+        requestBody.put("duration", videoDTO.getDuration());
+        requestBody.put("fps", videoDTO.getFps());
+        requestBody.put("with_audio", videoDTO.getWithAudio());
+        // 图生视频时传入图片URL
+        if (videoDTO.getImageUrl() != null && !videoDTO.getImageUrl().isEmpty()) {
+            requestBody.put("image_url", videoDTO.getImageUrl());
+        }
+
+        // 调用智谱视频生成API
+        String response = HttpRequest.post(zhipuBaseUrl + "/v4/videos/generations")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .body(JSONUtil.toJsonStr(requestBody))
+                .execute()
+                .body();
+
+        JSONObject json = JSONUtil.parseObj(response);
+        String taskId = json.getStr("id");
+        log.info("视频任务提交成功: taskId={}", taskId);
+
+        // 保存生成记录到数据库（状态：处理中）
+        GeneratedContent content = new GeneratedContent();
+        content.setUserId(user.getId());
+        content.setType("video");
+        content.setPrompt(videoDTO.getPrompt());
+        content.setTaskId(taskId);
+        content.setStatus(0);
+        content.setModelUsed(model);
+        generatedContentMapper.insert(content);
+
+        return taskId;
+    }
+
+    /**
+     * 查询视频任务结果
+     */
+    @Override
+    public VideoTaskVO queryVideoTask(String taskId) {
+        User user = userService.getCurrentUser();
+
+        if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
+            throw new BusinessException("请先配置API Key");
+        }
+
+        String apiKey = user.getApiKey();
+        log.info("查询视频任务: taskId={}", taskId);
+
+        // 调用智谱查询API
+        String response = HttpRequest.get(zhipuBaseUrl + "/v4/async-result/" + taskId)
+                .header("Authorization", "Bearer " + apiKey)
+                .execute()
+                .body();
+
+        JSONObject json = JSONUtil.parseObj(response);
+        
+        VideoTaskVO vo = new VideoTaskVO();
+        vo.setTaskId(taskId);
+        vo.setStatus(json.getStr("task_status"));
+
+        // 成功时获取视频URL
+        if ("SUCCESS".equals(vo.getStatus())) {
+            JSONArray videoResult = json.getJSONArray("video_result");
+            if (videoResult != null && !videoResult.isEmpty()) {
+                JSONObject video = videoResult.getJSONObject(0);
+                vo.setVideoUrl(video.getStr("url"));
+                vo.setCoverImageUrl(video.getStr("cover_image_url"));
+
+                // 更新数据库记录（状态：成功）
+                generatedContentMapper.update(new LambdaUpdateWrapper<GeneratedContent>()
+                        .eq(GeneratedContent::getTaskId, taskId)
+                        .set(GeneratedContent::getStatus, 1)
+                        .set(GeneratedContent::getResultUrl, video.getStr("url"))
+                        .set(GeneratedContent::getCoverUrl, video.getStr("cover_image_url")));
+            }
+        }
+
+        // 失败时获取错误信息
+        if ("FAIL".equals(vo.getStatus())) {
+            String errorMsg = json.getStr("message", "视频生成失败");
+            vo.setErrorMessage(errorMsg);
+
+            // 更新数据库记录（状态：失败）
+            generatedContentMapper.update(new LambdaUpdateWrapper<GeneratedContent>()
+                    .eq(GeneratedContent::getTaskId, taskId)
+                    .set(GeneratedContent::getStatus, 2)
+                    .set(GeneratedContent::getErrorMsg, errorMsg));
+        }
+
+        return vo;
     }
 }
