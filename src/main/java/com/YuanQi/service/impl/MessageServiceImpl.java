@@ -303,21 +303,14 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         // 携带文档聊天
         if (documentUrl != null && !documentUrl.isEmpty()) {
             try {
-                // 先解析文档
+                // 先解析文档 得到分块后的文档
                 List<Document> documents = documentParseService.parseDocument(documentUrl);
 
-                // 计算文档总token数
-                int totalTokenCount = 0;
-                StringBuilder fullText = new StringBuilder();
-                for (Document doc : documents) {
-                    fullText.append(doc.getText()).append("\n");
-                }
-                totalTokenCount = TokenUtil.estimateTokens(fullText.toString());
-
-                if (totalTokenCount < smallDocThreshold) {
+                if (documents.size() < smallDocThreshold) {
                     // 小文档：直接注入上下文
+                    String fullText = documentParseService.extractText(documents);
                     context.append("【用户提供的文档内容】\n").append(fullText).append("\n\n");
-                    log.info("小文档直接注入上下文，token数: {}", totalTokenCount);
+                    log.info("小文档直接注入上下文，分块数: {}", documents.size());
                 } else {
                     // 大文档：临时RAG检索
                     // 使用已解析的文档存入向量库
@@ -329,7 +322,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     }
                     // 删除临时向量数据
                     ragService.deleteDocuments(chunkIds);
-                    log.info("大文档临时RAG检索完成，token数: {}, 分块数: {}", totalTokenCount, chunkIds.size());
+                    log.info("大文档临时RAG检索完成，分块数: {}", chunkIds.size());
                 }
             } catch (Exception e) {
                 log.error("文档处理失败: {}", e.getMessage());

@@ -34,10 +34,10 @@ public class DocumentParseServiceImpl implements DocumentParseService {
 
     /**
      * 解析文档内容
-     * 使用TikaDocumentReader自动识别文档类型并提取文本
+     * 使用TikaDocumentReader自动识别文档类型并提取文本，并进行分块
      *
      * @param url 文档URL地址
-     * @return 解析后的Document列表
+     * @return 分块后的Document列表
      */
     @Override
     public List<Document> parseDocument(String url) {
@@ -46,8 +46,11 @@ public class DocumentParseServiceImpl implements DocumentParseService {
             Resource resource = getResource(url);
             TikaDocumentReader reader = new TikaDocumentReader(resource);
             List<Document> documents = reader.get();
-            log.info("文档解析成功，URL: {}, 文档数量: {}", url, documents.size());
-            return documents;
+
+            // 对解析后的文档进行分块
+            List<Document> chunks = splitDocuments(documents);
+            log.info("文档解析成功，URL: {}, 分块数量: {}", url, chunks.size());
+            return chunks;
         } catch (Exception e) {
             log.error("文档解析失败: {}", e.getMessage());
             throw new BusinessException("文档解析失败: " + e.getMessage());
@@ -81,8 +84,7 @@ public class DocumentParseServiceImpl implements DocumentParseService {
      * @return 文档的纯文本内容
      */
     @Override
-    public String extractText(String url) {
-        List<Document> documents = parseDocument(url);
+    public String extractText(List<Document> documents) {
         StringBuilder sb = new StringBuilder();
         for (Document doc : documents) {
             sb.append(doc.getText()).append("\n");

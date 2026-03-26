@@ -40,19 +40,17 @@ public class RagServiceImpl implements RagService {
 
     /**
      * 处理已解析的文档并存储到向量库
+     * 注意：documents已经是分块后的文档
      *
-     * @param documents 已解析的文档列表
+     * @param documents 已分块的文档列表
      * @param url       文档URL地址
      * @return 生成的文档块ID列表
      */
     @Override
     public List<String> processAndStoreDocuments(List<Document> documents, String url) {
-        // 使用TokenTextSplitter对文档进行分块，避免超出模型上下文限制
-        List<Document> chunks = documentParseService.splitDocuments(documents);
-
         // 为每个分块生成唯一ID，并添加元数据
         List<String> ids = new ArrayList<>();
-        for (Document chunk : chunks) {
+        for (Document chunk : documents) {
             String id = UUID.randomUUID().toString();
             chunk.getMetadata().put("id", id);
             chunk.getMetadata().put("source", url);
@@ -60,8 +58,8 @@ public class RagServiceImpl implements RagService {
         }
 
         // 将分块添加到向量存储，自动进行向量化
-        vectorStore.add(chunks);
-        log.info("文档处理完成，URL: {}, 分块数: {}", url, chunks.size());
+        vectorStore.add(documents);
+        log.info("文档处理完成，URL: {}, 分块数: {}", url, documents.size());
         return ids;
     }
 

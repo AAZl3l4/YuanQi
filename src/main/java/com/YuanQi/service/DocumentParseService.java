@@ -10,14 +10,14 @@ import java.util.List;
 public interface DocumentParseService {
 
     /**
-     * 解析文档内容
+     * 解析文档内容 并进行分块
      */
     List<Document> parseDocument(String url);
 
     /**
      * 解析文档内容（返回纯文本）
      */
-    String extractText(String url);
+    String extractText(List<Document> documents);
 
     /**
      * 分块文档
