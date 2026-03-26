@@ -147,6 +147,24 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Spring AI Tika 文档解析 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
+
+        <!-- Spring AI Transformers 本地Embedding -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-transformers</artifactId>
+        </dependency>
+
+        <!-- Spring AI SimpleVectorStore 向量数据库 -->
+         <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>

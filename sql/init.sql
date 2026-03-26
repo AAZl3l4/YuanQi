@@ -63,13 +63,36 @@ CREATE TABLE IF NOT EXISTS chat_message (
     INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对话消息表';
 
+-- AI生成内容记录表（图片/视频）
+CREATE TABLE IF NOT EXISTS ai_generated_content (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    type VARCHAR(20) NOT NULL COMMENT '类型：image-图片 video-视频',
+    prompt VARCHAR(1000) NOT NULL COMMENT '提示词',
+    result_url VARCHAR(500) DEFAULT NULL COMMENT '生成结果URL（图片/视频）',
+    cover_url VARCHAR(500) DEFAULT NULL COMMENT '封面图URL（视频专用）',
+    task_id VARCHAR(100) DEFAULT NULL COMMENT '异步任务ID（视频专用）',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-处理中 1-成功 2-失败',
+    error_msg VARCHAR(500) DEFAULT NULL COMMENT '错误信息（失败时）',
+    model_used VARCHAR(50) DEFAULT NULL COMMENT '使用的模型',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_type (type),
+    INDEX idx_status (status),
+    INDEX idx_task_id (task_id),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI生成内容记录表';
+
 -- 知识库表
 CREATE TABLE IF NOT EXISTS knowledge_base (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     name VARCHAR(100) NOT NULL COMMENT '知识库名称',
     description VARCHAR(500) DEFAULT NULL COMMENT '知识库描述',
-    collection_name VARCHAR(100) NOT NULL COMMENT 'Chroma集合名称',
+    collection_name VARCHAR(100) NOT NULL COMMENT 'SimpleVectorStore集合名称',
     doc_count INT DEFAULT 0 COMMENT '文档数量',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -97,44 +120,3 @@ CREATE TABLE IF NOT EXISTS agent (
     INDEX idx_user_id (user_id),
     INDEX idx_is_public (is_public)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能体表';
-
--- 用量统计表
-CREATE TABLE IF NOT EXISTS usage_stats (
-    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    user_id BIGINT NOT NULL COMMENT '用户ID',
-    stats_date DATE NOT NULL COMMENT '统计日期',
-    model_type VARCHAR(20) NOT NULL COMMENT '模型类型',
-    call_count INT DEFAULT 0 COMMENT '调用次数',
-    input_tokens INT DEFAULT 0 COMMENT '输入Token数',
-    output_tokens INT DEFAULT 0 COMMENT '输出Token数',
-    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_user_date_type (user_id, stats_date, model_type),
-    INDEX idx_user_id (user_id),
-    INDEX idx_stats_date (stats_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用量统计表';
-
--- AI生成内容记录表（图片/视频）
-CREATE TABLE IF NOT EXISTS ai_generated_content (
-    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    user_id BIGINT NOT NULL COMMENT '用户ID',
-    type VARCHAR(20) NOT NULL COMMENT '类型：image-图片 video-视频',
-    prompt VARCHAR(1000) NOT NULL COMMENT '提示词',
-    result_url VARCHAR(500) DEFAULT NULL COMMENT '生成结果URL（图片/视频）',
-    cover_url VARCHAR(500) DEFAULT NULL COMMENT '封面图URL（视频专用）',
-    task_id VARCHAR(100) DEFAULT NULL COMMENT '异步任务ID（视频专用）',
-    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0-处理中 1-成功 2-失败',
-    error_msg VARCHAR(500) DEFAULT NULL COMMENT '错误信息（失败时）',
-    model_used VARCHAR(50) DEFAULT NULL COMMENT '使用的模型',
-    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id),
-    INDEX idx_user_id (user_id),
-    INDEX idx_type (type),
-    INDEX idx_status (status),
-    INDEX idx_task_id (task_id),
-    INDEX idx_create_time (create_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI生成内容记录表';
