@@ -104,7 +104,7 @@ public class RagServiceImpl implements RagService {
 
         // 2. 构建提示词上下文
         StringBuilder context = new StringBuilder();
-        context.append("以下是相关的参考内容：\n\n");
+        context.append("以下是知识库检索到的相关资料。如果资料中提及了的，你必须严格基于资料回答：\n\n");
         for (int i = 0; i < relevantDocs.size(); i++) {
             context.append("【参考内容").append(i + 1).append("】\n");
             context.append(relevantDocs.get(i).getText()).append("\n\n");

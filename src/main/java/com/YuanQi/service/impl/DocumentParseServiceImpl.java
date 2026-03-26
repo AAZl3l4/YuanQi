@@ -7,9 +7,14 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,8 +42,9 @@ public class DocumentParseServiceImpl implements DocumentParseService {
     @Override
     public List<Document> parseDocument(String url) {
         try {
-            // 使用TikaDocumentReader解析文档，支持PDF、Word、Excel、PPT、TXT等多种格式
-            TikaDocumentReader reader = new TikaDocumentReader(new UrlResource(url));
+            // 根据URL类型选择Resource实现
+            Resource resource = getResource(url);
+            TikaDocumentReader reader = new TikaDocumentReader(resource);
             List<Document> documents = reader.get();
             log.info("文档解析成功，URL: {}, 文档数量: {}", url, documents.size());
             return documents;
@@ -46,6 +52,25 @@ public class DocumentParseServiceImpl implements DocumentParseService {
             log.error("文档解析失败: {}", e.getMessage());
             throw new BusinessException("文档解析失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 根据URL获取Resource
+     * 如果是本地文件URL，直接使用FileSystemResource
+     */
+    private Resource getResource(String url) throws Exception {
+        if (url.startsWith("http://localhost:8080/file/")) {
+            // 本地文件，直接读取
+            String filename = url.substring(url.lastIndexOf("/") + 1);
+            Path filePath = Paths.get("src/main/resources/files/").resolve(filename).toAbsolutePath();
+            File file = filePath.toFile();
+            if (file.exists()) {
+                return new FileSystemResource(file);
+            }
+            return new UrlResource(url);
+        }
+        // 远程URL，使用UrlResource
+        return new UrlResource(url);
     }
 
     /**

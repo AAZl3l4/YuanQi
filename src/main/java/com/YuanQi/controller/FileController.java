@@ -15,11 +15,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/file")
 public class FileController {
-    private static final String UPLOAD_DIR = "src/main/resources/static/";
+    private static final String UPLOAD_DIR = "src/main/resources/files/";
 
     @PostMapping("/upload")
     // 保存文件到服务器
-    private String saveFile(@RequestPart("file") MultipartFile file) {
+    public String saveFile(@RequestPart("file") MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
             return "文件名获取失败";

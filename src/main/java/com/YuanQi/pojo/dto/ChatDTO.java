@@ -29,10 +29,20 @@ public class ChatDTO {
     private String imageUrl;
 
     /**
+     * 文档URL（携带文档聊天）
+     */
+    private String documentUrl;
+
+    /**
+     * 知识库ID（基于知识库聊天）
+     */
+    private Long knowledgeBaseId;
+
+    /**
      * 上下文轮数（1轮=2条消息：用户+AI）
      * 最多20轮，默认10轮
      */
-    @Min(value = 1, message = "上下文轮数最少1轮")
+    @Min(value = 0, message = "上下文轮数不能为负数")
     @Max(value = 20, message = "上下文轮数最多20轮")
     private Integer contextRounds = 10;
 }

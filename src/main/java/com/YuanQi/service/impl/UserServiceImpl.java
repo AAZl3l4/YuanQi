@@ -56,6 +56,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Value("${yuanqi.default-models.video}")
     private String defaultVideoModel;
 
+    private static final String EMAIL_CACHE_PREFIX = "email:code:";
+
     /**
      * 发送邮箱验证码
      */
@@ -73,7 +75,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         mailSender.send(message);
 
         // 缓存验证码
-        caffeineCache.put("email:code:" + email, code);
+        caffeineCache.put(EMAIL_CACHE_PREFIX+ email, code);
 
         log.info("已向 {} 发送验证码", email);
     }
@@ -84,7 +86,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void register(UserDTO userDTO) {
         // 校验验证码
-        String cacheCode = caffeineCache.getIfPresent("email:code:" + userDTO.getEmail());
+        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + userDTO.getEmail());
         if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
             throw new BusinessException("验证码错误或已过期");
         }
@@ -113,7 +115,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         save(user);
 
         // 清除验证码
-        caffeineCache.invalidate("email:code:" + userDTO.getEmail());
+        caffeineCache.invalidate(EMAIL_CACHE_PREFIX + userDTO.getEmail());
 
         log.info("用户 {} 注册成功", userDTO.getEmail());
     }
@@ -124,7 +126,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void login(UserDTO userDTO) {
         // 校验验证码 TODO 测试环境先注释
-//        String cacheCode = caffeineCache.getIfPresent("email:code:" + userDTO.getEmail());
+//        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + userDTO.getEmail());
 //        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
 //            throw new BusinessException("验证码错误或已过期");
 //        }
@@ -150,7 +152,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         StpUtil.getSession().set("role", user.getRole());
 
         // 清除验证码
-        caffeineCache.invalidate("email:code:" + userDTO.getEmail());
+        caffeineCache.invalidate(EMAIL_CACHE_PREFIX + userDTO.getEmail());
 
         log.info("用户 {} 登录成功, 角色: {}", userDTO.getEmail(), user.getRole());
     }

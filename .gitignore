@@ -38,3 +38,4 @@ out/
 
 # 配置文件暂时不传到仓库
 *.yml
+/src/main/resources/files/

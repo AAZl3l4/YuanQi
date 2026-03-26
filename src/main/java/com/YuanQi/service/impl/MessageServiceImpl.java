@@ -9,12 +9,16 @@ import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.mapper.GeneratedContentMapper;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.GeneratedContent;
+import com.YuanQi.pojo.KnowledgeBase;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.pojo.dto.ImageDTO;
 import com.YuanQi.pojo.dto.VideoDTO;
 import com.YuanQi.pojo.vo.VideoTaskVO;
+import com.YuanQi.service.DocumentParseService;
+import com.YuanQi.service.KnowledgeBaseService;
 import com.YuanQi.service.MessageService;
+import com.YuanQi.service.RagService;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.service.UserService;
 import com.YuanQi.utils.BusinessException;
@@ -65,9 +69,18 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     private final SessionService sessionService;
     private final UserService userService;
     private final SpringAiConfig springAiConfig;
+    private final DocumentParseService documentParseService;
+    private final RagService ragService;
+    private final KnowledgeBaseService knowledgeBaseService;
 
     @Value("${spring.ai.zhipuai.base-url}")
     private String zhipuBaseUrl;
+
+    @Value("${yuanqi.rag.small-doc-threshold}")
+    private int smallDocThreshold;
+
+    @Value("${yuanqi.rag.rag-top-k}")
+    private int ragTopK;
 
     /**
      * 获取会话历史消息（分页）
@@ -92,6 +105,8 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         String sessionId = chatDTO.getSessionId();
         String message = chatDTO.getMessage();
         String imageUrl = chatDTO.getImageUrl();
+        String documentUrl = chatDTO.getDocumentUrl();
+        Long knowledgeBaseId = chatDTO.getKnowledgeBaseId();
         Integer contextRounds = chatDTO.getContextRounds();
 
         Boolean isFirstMessage = sessionService.checkSessionFirstMessage(sessionId);
@@ -119,11 +134,12 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         userMessage.setModelUsed(model);
         chatMessageMapper.insert(userMessage);
 
-        // 构建消息历史
-        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, contextRounds);
+        // 构建消息历史（支持文档和知识库）
+        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds);
 
         SseEmitter emitter = new SseEmitter(300000L);
-        log.info("开始对话: sessionId={}, hasImage={}, model={}", sessionId, imageUrl != null, model);
+        log.info("开始对话: sessionId={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, model={}", 
+                sessionId, imageUrl != null, documentUrl != null, knowledgeBaseId, model);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -197,33 +213,43 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
     /**
      * 构建消息历史上下文
+     * 支持图片、文档、知识库
      */
-    private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl, Integer contextRounds) {
+    private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl, 
+            String documentUrl, Long knowledgeBaseId, Integer contextRounds) {
         List<Message> messages = new ArrayList<>();
 
-        // 添加系统提示词
-        messages.add(new SystemMessage(
-                "你是元启AI助手的智能助手。元启AI是一个集成多种AI能力的智能对话平台，" +
-                "支持文字对话、图文理解、图像生成、视频生成等多种功能。请用简洁友好的方式回答用户问题。"
-        ));
+        // 构建系统提示词（可能包含文档/知识库上下文）
+        String systemPrompt = "你是元启AI助手的智能助手。元启AI是一个集成多种AI能力的智能对话平台，" +
+                "支持文字对话、图文理解、图像生成、视频生成等多种功能。请用简洁友好的方式回答用户问题。";
+
+        // 处理文档或知识库上下文
+        String ragContext = buildRagContext(documentUrl, knowledgeBaseId, currentMessage);
+        if (!ragContext.isEmpty()) {
+            systemPrompt = systemPrompt + "\n\n" + ragContext;
+        }
+
+        messages.add(new SystemMessage(systemPrompt));
 
         // 根据轮数计算消息条数（1轮=2条消息）
         int messageLimit = contextRounds * 2;
-        Page<ChatMessage> page = new Page<>(1, messageLimit);
-        IPage<ChatMessage> history = chatMessageMapper.selectPage(page,
-                new LambdaQueryWrapper<ChatMessage>()
-                        .eq(ChatMessage::getSessionId, sessionId)
-                        .orderByDesc(ChatMessage::getCreateTime)
-        );
+        if (messageLimit != 0) {
+            Page<ChatMessage> page = new Page<>(1, messageLimit);
+            IPage<ChatMessage> history = chatMessageMapper.selectPage(page,
+                    new LambdaQueryWrapper<ChatMessage>()
+                            .eq(ChatMessage::getSessionId, sessionId)
+                            .orderByDesc(ChatMessage::getCreateTime)
+            );
 
-        // 反转顺序，按时间正序排列
-        List<ChatMessage> records = history.getRecords();
-        for (int i = records.size() - 1; i >= 0; i--) {
-            ChatMessage msg = records.get(i);
-            if ("user".equals(msg.getRole())) {
-                messages.add(new UserMessage(msg.getContent()));
-            } else if ("assistant".equals(msg.getRole())) {
-                messages.add(new AssistantMessage(msg.getContent()));
+            // 反转顺序，按时间正序排列
+            List<ChatMessage> records = history.getRecords();
+            for (int i = records.size() - 1; i >= 0; i--) {
+                ChatMessage msg = records.get(i);
+                if ("user".equals(msg.getRole())) {
+                    messages.add(new UserMessage(msg.getContent()));
+                } else if ("assistant".equals(msg.getRole())) {
+                    messages.add(new AssistantMessage(msg.getContent()));
+                }
             }
         }
 
@@ -250,6 +276,60 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
 
         return messages;
+    }
+
+    /**
+     * 构建RAG上下文
+     * 处理文档和知识库
+     */
+    private String buildRagContext(String documentUrl, Long knowledgeBaseId, String query) {
+        StringBuilder context = new StringBuilder();
+
+        // 基于知识库聊天
+        if (knowledgeBaseId != null) {
+            // 检查知识库是否属于当前用户并获取知识库对象
+            KnowledgeBase knowledgeBase = knowledgeBaseService.checkOwner(knowledgeBaseId);
+            // 确保知识库已加载到向量库
+            knowledgeBaseService.ensureLoaded(knowledgeBase);
+            // 构建RAG上下文
+            String ragContext = ragService.buildRagContext(query, ragTopK);
+            if (!ragContext.isEmpty()) {
+                context.append(ragContext);
+            }
+            log.info("知识库RAG上下文构建完成，知识库ID: {}", knowledgeBaseId);
+        }
+
+        // 携带文档聊天
+        if (documentUrl != null && !documentUrl.isEmpty()) {
+            try {
+                // 提取文档文本
+                String docText = documentParseService.extractText(documentUrl);
+                // 估算token数
+                int tokenCount = TokenUtil.estimateTokens(docText);
+
+                if (tokenCount < smallDocThreshold) {
+                    // 小文档：直接注入上下文
+                    context.append("【用户提供的文档内容】\n").append(docText).append("\n\n");
+                    log.info("小文档直接注入上下文，token数: {}", tokenCount);
+                } else {
+                    // 大文档：临时RAG检索
+                    // 先存入向量库
+                    List<String> chunkIds = ragService.processAndStoreDocument(documentUrl);
+                    // 检索相关内容
+                    String ragContext = ragService.buildRagContext(query, ragTopK);
+                    if (!ragContext.isEmpty()) {
+                        context.append(ragContext);
+                    }
+                    // 删除临时向量数据
+                    ragService.deleteDocuments(chunkIds);
+                    log.info("大文档临时RAG检索完成，token数: {}, 分块数: {}", tokenCount, chunkIds.size());
+                }
+            } catch (Exception e) {
+                log.error("文档处理失败: {}", e.getMessage());
+            }
+        }
+
+        return context.toString();
     }
 
     /**

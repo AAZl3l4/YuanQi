@@ -92,14 +92,16 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     user_id BIGINT NOT NULL COMMENT '用户ID',
     name VARCHAR(100) NOT NULL COMMENT '知识库名称',
     description VARCHAR(500) DEFAULT NULL COMMENT '知识库描述',
-    collection_name VARCHAR(100) NOT NULL COMMENT 'SimpleVectorStore集合名称',
-    doc_count INT DEFAULT 0 COMMENT '文档数量',
+    document_url VARCHAR(1000) NOT NULL COMMENT '文档URL地址',
+    chunk_ids TEXT COMMENT '分块ID列表（逗号分隔）',
+    chunk_count INT DEFAULT 0 COMMENT '分块数量',
+    status TINYINT DEFAULT 0 COMMENT '状态：0-处理中 1-可用 2-失败',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     INDEX idx_user_id (user_id),
-    INDEX idx_collection_name (collection_name)
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库表';
 
 -- 智能体表
