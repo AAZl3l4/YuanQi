@@ -37,6 +37,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImageOptionsBuilder;
 import org.springframework.ai.image.ImagePrompt;
@@ -233,7 +234,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         // 根据轮数计算消息条数（1轮=2条消息）
         int messageLimit = contextRounds * 2;
-        if (messageLimit != 0) {
+        if (messageLimit > 0) {
             Page<ChatMessage> page = new Page<>(1, messageLimit);
             IPage<ChatMessage> history = chatMessageMapper.selectPage(page,
                     new LambdaQueryWrapper<ChatMessage>()
@@ -302,19 +303,25 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         // 携带文档聊天
         if (documentUrl != null && !documentUrl.isEmpty()) {
             try {
-                // 提取文档文本
-                String docText = documentParseService.extractText(documentUrl);
-                // 估算token数
-                int tokenCount = TokenUtil.estimateTokens(docText);
+                // 先解析文档
+                List<Document> documents = documentParseService.parseDocument(documentUrl);
 
-                if (tokenCount < smallDocThreshold) {
+                // 计算文档总token数
+                int totalTokenCount = 0;
+                StringBuilder fullText = new StringBuilder();
+                for (Document doc : documents) {
+                    fullText.append(doc.getText()).append("\n");
+                }
+                totalTokenCount = TokenUtil.estimateTokens(fullText.toString());
+
+                if (totalTokenCount < smallDocThreshold) {
                     // 小文档：直接注入上下文
-                    context.append("【用户提供的文档内容】\n").append(docText).append("\n\n");
-                    log.info("小文档直接注入上下文，token数: {}", tokenCount);
+                    context.append("【用户提供的文档内容】\n").append(fullText).append("\n\n");
+                    log.info("小文档直接注入上下文，token数: {}", totalTokenCount);
                 } else {
                     // 大文档：临时RAG检索
-                    // 先存入向量库
-                    List<String> chunkIds = ragService.processAndStoreDocument(documentUrl);
+                    // 使用已解析的文档存入向量库
+                    List<String> chunkIds = ragService.processAndStoreDocuments(documents, documentUrl);
                     // 检索相关内容
                     String ragContext = ragService.buildRagContext(query, ragTopK);
                     if (!ragContext.isEmpty()) {
@@ -322,7 +329,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     }
                     // 删除临时向量数据
                     ragService.deleteDocuments(chunkIds);
-                    log.info("大文档临时RAG检索完成，token数: {}, 分块数: {}", tokenCount, chunkIds.size());
+                    log.info("大文档临时RAG检索完成，token数: {}, 分块数: {}", totalTokenCount, chunkIds.size());
                 }
             } catch (Exception e) {
                 log.error("文档处理失败: {}", e.getMessage());

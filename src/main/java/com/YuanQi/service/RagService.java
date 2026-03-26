@@ -15,6 +15,11 @@ public interface RagService {
     List<String> processAndStoreDocument(String url);
 
     /**
+     * 处理已解析的文档并存储到向量库
+     */
+    List<String> processAndStoreDocuments(List<Document> documents, String url);
+
+    /**
      * 删除向量库中的文档
      */
     void deleteDocuments(List<String> ids);
