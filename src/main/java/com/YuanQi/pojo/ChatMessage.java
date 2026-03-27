@@ -38,18 +38,6 @@ public class ChatMessage extends BaseEntity {
     private String modelUsed;
 
     /**
-     * 使用的工具列表（JSON数组）
-     */
-    @TableField("tools_used")
-    private String toolsUsed;
-
-    /**
-     * 工具返回结果（JSON格式）
-     */
-    @TableField("tool_results")
-    private String toolResults;
-
-    /**
      * 输入Token数
      */
     @TableField("input_tokens")

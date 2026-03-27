@@ -4,23 +4,16 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.YuanQi.configuration.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.mapper.GeneratedContentMapper;
-import com.YuanQi.pojo.ChatMessage;
-import com.YuanQi.pojo.GeneratedContent;
-import com.YuanQi.pojo.KnowledgeBase;
-import com.YuanQi.pojo.User;
+import com.YuanQi.pojo.*;
 import com.YuanQi.pojo.dto.ChatDTO;
 import com.YuanQi.pojo.dto.ImageDTO;
 import com.YuanQi.pojo.dto.VideoDTO;
 import com.YuanQi.pojo.vo.VideoTaskVO;
-import com.YuanQi.service.DocumentParseService;
-import com.YuanQi.service.KnowledgeBaseService;
-import com.YuanQi.service.MessageService;
-import com.YuanQi.service.RagService;
-import com.YuanQi.service.SessionService;
-import com.YuanQi.service.UserService;
+import com.YuanQi.service.*;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +35,7 @@ import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImageOptionsBuilder;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -51,11 +45,9 @@ import reactor.core.publisher.Flux;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * 消息服务实现
@@ -73,6 +65,8 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     private final DocumentParseService documentParseService;
     private final RagService ragService;
     private final KnowledgeBaseService knowledgeBaseService;
+    private final McpTools mcpTools;
+    private final McpToolService mcpToolService;
 
     @Value("${spring.ai.zhipuai.base-url}")
     private String zhipuBaseUrl;
@@ -109,6 +103,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         String documentUrl = chatDTO.getDocumentUrl();
         Long knowledgeBaseId = chatDTO.getKnowledgeBaseId();
         Integer contextRounds = chatDTO.getContextRounds();
+        List<Long> enabledTools = chatDTO.getEnabledTools();
 
         Boolean isFirstMessage = sessionService.checkSessionFirstMessage(sessionId);
         User user = userService.getCurrentUser();
@@ -138,9 +133,12 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         // 构建消息历史（支持文档和知识库）
         List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds);
 
+        // 获取用户选择的工具
+        List<ToolCallback> tools = getTools(enabledTools);
+
         SseEmitter emitter = new SseEmitter(300000L);
-        log.info("开始对话: sessionId={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, model={}", 
-                sessionId, imageUrl != null, documentUrl != null, knowledgeBaseId, model);
+        log.info("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}",
+                sessionId, model, imageUrl != null, documentUrl != null, knowledgeBaseId != null, enabledTools != null);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -150,6 +148,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                 // 流式调用
                 Flux<ChatResponse> stream = chatClient.prompt()
                         .messages(messages)  // 传入历史消息(含本条)
+                        .toolCallbacks(tools)        // 注册工具
                         .stream() // 启用流式模式
                         .chatResponse(); // 获取 ChatResponse 流
 
@@ -333,6 +332,36 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     }
 
     /**
+     * 获取筛选后的工具
+     */
+    private List<ToolCallback> getTools(List<Long> enabledTools) {
+        if (enabledTools == null || enabledTools.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 根据ID查询数据库中的工具
+        List<McpTool> dbTools = mcpToolService.listByIds(enabledTools);
+        if (dbTools.isEmpty()) {
+            throw new BusinessException("未找到指定的工具");
+        }
+
+        // 检查是否启用
+        Set<String> enabledToolNames = new HashSet<>();
+        for (McpTool tool : dbTools) {
+            if (tool.getEnabled() == 1) {
+                enabledToolNames.add(tool.getName());
+            } else {
+                throw new BusinessException(tool.getName() + "工具未启用");
+            }
+        }
+
+        // 从 McpTools 获取所有工具回调并过滤
+        List<ToolCallback> allCallbacks = mcpTools.getAllToolCallbacks();
+        return allCallbacks.stream()
+                .filter(callback -> enabledToolNames.contains(callback.getToolDefinition().name()))
+                .collect(Collectors.toList());
+    }
+    /**
      * 保存AI回复消息
      */
     private void saveAssistantMessage(String sessionId, String content, String model, int inputTokens, int outputTokens) {
@@ -420,6 +449,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         String model = user.getVideoModel();
         log.info("提交视频生成任务: model={}, prompt={}", model, videoDTO.getPrompt());
 
+        // Spring Ai 暂时还不支持视频生成 直接调用智谱API生成视频
         // 构建请求体
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);

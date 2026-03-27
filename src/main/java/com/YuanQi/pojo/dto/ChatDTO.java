@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 聊天请求DTO
  */
@@ -37,6 +39,11 @@ public class ChatDTO {
      * 知识库ID（基于知识库聊天）
      */
     private Long knowledgeBaseId;
+
+    /**
+     * 启用的MCP工具ID列表
+     */
+    private List<Long> enabledTools;
 
     /**
      * 上下文轮数（1轮=2条消息：用户+AI）

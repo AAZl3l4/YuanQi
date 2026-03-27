@@ -51,8 +51,6 @@ CREATE TABLE IF NOT EXISTS chat_message (
     role VARCHAR(20) NOT NULL COMMENT '角色：user-用户 assistant-助手 system-系统',
     content TEXT NOT NULL COMMENT '消息内容',
     model_used VARCHAR(50) DEFAULT NULL COMMENT '实际使用的模型（根据chat_type自动选择）',
-    tools_used JSON DEFAULT NULL COMMENT '使用的工具列表（JSON数组，空数组表示未使用）',
-    tool_results JSON DEFAULT NULL COMMENT '工具返回结果（JSON格式，包含每个工具的返回）',
     input_tokens INT DEFAULT 0 COMMENT '输入Token数',
     output_tokens INT DEFAULT 0 COMMENT '输出Token数',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -122,3 +120,23 @@ CREATE TABLE IF NOT EXISTS agent (
     INDEX idx_user_id (user_id),
     INDEX idx_is_public (is_public)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='智能体表';
+
+-- MCP工具配置表
+CREATE TABLE IF NOT EXISTS mcp_tool (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    name VARCHAR(50) NOT NULL COMMENT '工具名称（方法名）',
+    description VARCHAR(500) DEFAULT NULL COMMENT '工具描述',
+    enabled TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用：0-禁用 1-启用',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_name (name),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MCP工具配置表';
+
+-- MCP工具初始数据
+INSERT INTO mcp_tool (name, description, enabled, sort_order) VALUES
+('getWeather', '查询指定城市的天气信息', 1, 1),
+('getRandomQuote', '获取随机一言', 1, 2);
