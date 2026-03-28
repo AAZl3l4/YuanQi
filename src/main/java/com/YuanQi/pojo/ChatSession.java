@@ -30,4 +30,10 @@ public class ChatSession extends BaseEntity {
      */
     @TableField("title")
     private String title;
+
+    /**
+     * 智能体ID（NULL表示普通会话）
+     */
+    @TableField("agent_id")
+    private Long agentId;
 }

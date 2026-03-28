@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.YuanQi.configuration.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
+import com.YuanQi.mapper.AgentMapper;
 import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.mapper.GeneratedContentMapper;
 import com.YuanQi.pojo.*;
@@ -59,6 +60,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
     private final ChatMessageMapper chatMessageMapper;
     private final GeneratedContentMapper generatedContentMapper;
+    private final AgentMapper agentMapper;
     private final SessionService sessionService;
     private final UserService userService;
     private final SpringAiConfig springAiConfig;
@@ -105,7 +107,26 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         Integer contextRounds = chatDTO.getContextRounds();
         List<Long> enabledTools = chatDTO.getEnabledTools();
 
-        Boolean isFirstMessage = sessionService.checkSessionFirstMessage(sessionId);
+        // 验证会话归属，获取会话信息
+        ChatSession session = sessionService.checkSessionOwner(sessionId);
+        Agent agent = null;
+        String systemPrompt = null;
+        if (session.getAgentId() != null) {
+            agent = agentMapper.selectById(session.getAgentId());
+            if (agent != null) {
+                // 使用智能体的系统提示词
+                systemPrompt = agent.getSystemPrompt();
+                // 使用智能体的知识库（覆盖）
+                if (agent.getKnowledgeBaseId() != null) {
+                    knowledgeBaseId = agent.getKnowledgeBaseId();
+                }
+                // 使用智能体的工具（覆盖）
+                if (agent.getToolIds() != null && !agent.getToolIds().isEmpty()) {
+                    enabledTools = agent.getToolIds();
+                }
+            }
+        }
+
         User user = userService.getCurrentUser();
 
         if (user.getApiKey() == null || user.getApiKey().isEmpty()) {
@@ -113,10 +134,13 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
         String apiKey = user.getApiKey();
 
-        // 首次对话，自动生成会话标题
-        if (isFirstMessage) {
-            String title = generateSessionTitle(apiKey, user.getChatModel(), message);
-            sessionService.updateSessionTitle(sessionId, title);
+        // 首次对话，自动生成会话标题（智能体会话已有标题，跳过）
+        if (agent == null){
+            Boolean isFirstMessage = sessionService.isFirstMessage(sessionId);
+            if (isFirstMessage) {
+                String title = generateSessionTitle(apiKey, user.getChatModel(), message);
+                sessionService.updateSessionTitle(sessionId, title);
+            }
         }
 
         // 根据是否带图选择模型
@@ -131,14 +155,14 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         chatMessageMapper.insert(userMessage);
 
         // 构建消息历史（支持文档和知识库）
-        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds);
+        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds, systemPrompt, enabledTools);
 
         // 获取用户选择的工具
         List<ToolCallback> tools = getTools(enabledTools);
 
         SseEmitter emitter = new SseEmitter(300000L);
-        log.info("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}",
-                sessionId, model, imageUrl != null, documentUrl != null, knowledgeBaseId != null, enabledTools != null);
+        log.info("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}, agentId={}",
+                sessionId, model, imageUrl != null && !imageUrl.isEmpty(), documentUrl != null && !documentUrl.isEmpty(), knowledgeBaseId != null, enabledTools != null && !enabledTools.isEmpty(), agent != null);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -217,17 +241,13 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
      * 支持图片、文档、知识库
      */
     private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl, 
-            String documentUrl, Long knowledgeBaseId, Integer contextRounds) {
+            String documentUrl, Long knowledgeBaseId, Integer contextRounds, String systemPrompt, List<Long> enabledTools) {
         List<Message> messages = new ArrayList<>();
 
-        // 构建系统提示词（可能包含文档/知识库上下文）
-        String systemPrompt = "你是元启AI助手的智能助手。元启AI是一个集成多种AI能力的智能对话平台，" +
-                "支持文字对话、图文理解、图像生成、视频生成等多种功能。请用简洁友好的方式回答用户问题。";
-
-        // 处理文档或知识库上下文
-        String ragContext = buildRagContext(documentUrl, knowledgeBaseId, currentMessage);
-        if (!ragContext.isEmpty()) {
-            systemPrompt = systemPrompt + "\n\n" + ragContext;
+        // 构建系统提示词
+        if (systemPrompt == null || systemPrompt.isEmpty()) {
+            systemPrompt = "你是元启AI助手的智能助手。元启AI是一个集成多种AI能力的智能对话平台，" +
+                    "支持文字对话、图文理解、知识库检索、MCP调用等多种功能。请用简洁友好的方式回答用户问题。";
         }
 
         messages.add(new SystemMessage(systemPrompt));
@@ -252,6 +272,17 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     messages.add(new AssistantMessage(msg.getContent()));
                 }
             }
+        }
+
+        // 处理文档或知识库上下文
+        String ragContext = buildRagContext(documentUrl, knowledgeBaseId, currentMessage);
+        if (!ragContext.isEmpty()) {
+            messages.add(new UserMessage(ragContext));
+        }
+
+        // 强调使用MCP工具
+        if (enabledTools != null && !enabledTools.isEmpty()) {
+            messages.add(new UserMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据"));
         }
 
         // 根据是否带图构建当前消息

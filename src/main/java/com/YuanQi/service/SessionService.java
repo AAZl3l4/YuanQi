@@ -1,6 +1,7 @@
 package com.YuanQi.service;
 
 import com.YuanQi.pojo.ChatSession;
+import com.YuanQi.pojo.vo.SessionVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -10,9 +11,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface SessionService extends IService<ChatSession> {
 
     /**
-     * 创建新会话
+     * 创建新会话（支持智能体）
      */
-    ChatSession createSession();
+    SessionVO createSession(Long agentId);
 
     /**
      * 获取用户的会话列表（分页）
@@ -35,7 +36,7 @@ public interface SessionService extends IService<ChatSession> {
     ChatSession checkSessionOwner(String sessionId);
 
     /**
-     * 验证会话归属，并检测是否是首次对话
+     * 检测是否是首次对话
      */
-    Boolean checkSessionFirstMessage(String sessionId);
+    Boolean isFirstMessage(String sessionId);
 }

@@ -1,6 +1,7 @@
 package com.YuanQi.controller;
 
 import com.YuanQi.pojo.ChatSession;
+import com.YuanQi.pojo.vo.SessionVO;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.utils.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -18,11 +19,11 @@ public class SessionController {
     private final SessionService sessionService;
 
     /**
-     * 创建新会话
+     * 创建新会话（支持智能体）
      */
     @PostMapping
-    public Result<ChatSession> createSession() {
-        ChatSession session = sessionService.createSession();
+    public Result<SessionVO> createSession(@RequestParam(required = false) Long agentId) {
+        SessionVO session = sessionService.createSession(agentId);
         return Result.success(session);
     }
 

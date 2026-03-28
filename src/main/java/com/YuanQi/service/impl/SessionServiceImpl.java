@@ -3,8 +3,11 @@ package com.YuanQi.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.mapper.ChatMessageMapper;
 import com.YuanQi.mapper.ChatSessionMapper;
+import com.YuanQi.pojo.Agent;
 import com.YuanQi.pojo.ChatMessage;
 import com.YuanQi.pojo.ChatSession;
+import com.YuanQi.pojo.vo.SessionVO;
+import com.YuanQi.service.AgentService;
 import com.YuanQi.service.SessionService;
 import com.YuanQi.utils.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -13,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -27,23 +31,38 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
 
     private final ChatSessionMapper chatSessionMapper;
     private final ChatMessageMapper chatMessageMapper;
+    private final AgentService agentService;
 
     /**
-     * 创建新会话
+     * 创建新会话（支持智能体）
      */
     @Override
-    public ChatSession createSession() {
+    public SessionVO createSession(Long agentId) {
         Long userId = StpUtil.getLoginIdAsLong();
 
         ChatSession session = new ChatSession();
         session.setUserId(userId);
         session.setSessionId(UUID.randomUUID().toString().replace("-", ""));
-        session.setTitle("新会话");
+        session.setAgentId(agentId);
+
+        // 如果有智能体，设置默认标题为智能体名称
+        SessionVO vo = new SessionVO();
+        if (agentId != null) {
+            Agent agent = agentService.checkAvailable(agentId);
+            session.setTitle(agent.getName());
+            vo.setAgentName(agent.getName());
+            vo.setAgentAvatar(agent.getAvatar());
+            vo.setAgentDescription(agent.getDescription());
+            vo.setWelcomeMessage(agent.getWelcomeMessage());
+        } else {
+            session.setTitle("新会话");
+        }
 
         chatSessionMapper.insert(session);
-        log.info("用户 {} 创建会话: {}", userId, session.getSessionId());
+        BeanUtils.copyProperties(session, vo);
+        log.info("用户 {} 创建会话: {}, agentId={}", userId, session.getSessionId(), agentId);
 
-        return session;
+        return vo;
     }
 
     /**
@@ -113,13 +132,10 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
     }
 
     /**
-     * 验证会话归属并且验证是否是首次对话
+     * 检测是否是首次对话
      */
     @Override
-    public Boolean checkSessionFirstMessage(String sessionId) {
-        checkSessionOwner(sessionId);
-
-        // 查询该会话是否有消息
+    public Boolean isFirstMessage(String sessionId) {
         Long messageCount = chatMessageMapper.selectCount(
                 new LambdaQueryWrapper<ChatMessage>()
                         .eq(ChatMessage::getSessionId, sessionId)

@@ -114,7 +114,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public Result<Void> handleRuntimeException(RuntimeException ex) {
-        log.error("运行时异常: ", ex);
+        log.error("运行时异常: ", ex.getMessage());
         return Result.error(ex.getMessage());
     }
 
@@ -123,7 +123,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception ex) {
-        log.error("系统异常: ", ex);
+        log.error("系统异常: ", ex.getMessage());
         return Result.error("系统繁忙，请稍后重试");
     }
 }
