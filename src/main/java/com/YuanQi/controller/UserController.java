@@ -139,4 +139,17 @@ public class UserController {
         StpUtil.logout(userId);
         return Result.success();
     }
+
+    /**
+     * 发送邮件给指定用户（管理员）
+     */
+    @SaCheckRole("admin")
+    @PostMapping("/send-email/{userId}")
+    public Result<Void> sendEmailToUser(
+            @PathVariable Long userId,
+            @RequestParam String subject,
+            @RequestParam String content) {
+        userService.sendEmailToUser(userId, subject, content);
+        return Result.success();
+    }
 }

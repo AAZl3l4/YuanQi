@@ -46,4 +46,9 @@ public interface UserService extends IService<User> {
      * 获取在线用户列表
      */
     List<OnlineUserVO> listOnlineUsers();
+
+    /**
+     * 管理员发送邮件给指定用户
+     */
+    void sendEmailToUser(Long userId, String subject, String content);
 }

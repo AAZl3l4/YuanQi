@@ -257,4 +257,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         return onlineUsers;
     }
+
+    /**
+     * 管理员发送邮件给指定用户
+     */
+    @Override
+    public void sendEmailToUser(Long userId, String subject, String content) {
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(user.getEmail());
+        message.setSubject(subject);
+        message.setText(content);
+        mailSender.send(message);
+
+        log.info("管理员发送邮件给用户 {}: {}", user.getEmail(), subject);
+    }
 }
