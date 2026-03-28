@@ -90,7 +90,11 @@ public class UserController {
         Page<User> pageParam = new Page<>(page, size);
         IPage<User> userPage = userService.page(pageParam);
         // 清除密码
-        userPage.getRecords().forEach(user -> user.setPassword(null));
+        userPage.getRecords().forEach(user -> {
+                user.setPassword(null);
+                user.setApiKey(null);
+            }
+        );
         return Result.success(userPage);
     }
 

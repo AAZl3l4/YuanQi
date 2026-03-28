@@ -154,13 +154,7 @@ public class KnowledgeBaseServiceImpl extends ServiceImpl<KnowledgeBaseMapper, K
     @Override
     public IPage<KnowledgeBase> pageList(Integer page, Integer size, Long userId) {
         Page<KnowledgeBase> pageParam = new Page<>(page, size);
-        LambdaQueryWrapper<KnowledgeBase> wrapper = new LambdaQueryWrapper<>();
-        // userId不为空时按用户筛选
-        if (userId != null) {
-            wrapper.eq(KnowledgeBase::getUserId, userId);
-        }
-        wrapper.orderByDesc(KnowledgeBase::getCreateTime);
-        return page(pageParam, wrapper);
+        return baseMapper.selectPageWithUsername(pageParam, userId);
     }
 
     /**

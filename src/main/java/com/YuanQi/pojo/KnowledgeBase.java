@@ -21,6 +21,12 @@ public class KnowledgeBase extends BaseEntity {
     private Long userId;
 
     /**
+     * 用户名（展示用，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String username;
+
+    /**
      * 知识库名称
      */
     @NotBlank(message = "知识库名称不能为空")

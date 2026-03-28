@@ -35,7 +35,7 @@ public class KnowledgeBaseController {
      * 更新知识库
      */
     @PutMapping("/update")
-    public Result<KnowledgeBase> update(@RequestBody @Validated KnowledgeBase knowledgeBase) {
+    public Result<KnowledgeBase> update(@RequestBody KnowledgeBase knowledgeBase) {
         KnowledgeBase updated = knowledgeBaseService.update(knowledgeBase);
         return Result.success(updated);
     }

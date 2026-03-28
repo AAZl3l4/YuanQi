@@ -33,7 +33,7 @@ public class AgentController {
      * 更新智能体
      */
     @PutMapping("/update")
-    public Result<Agent> update(@RequestBody @Validated Agent agent) {
+    public Result<Agent> update(@RequestBody Agent agent) {
         Agent updated = agentService.update(agent);
         return Result.success(updated);
     }

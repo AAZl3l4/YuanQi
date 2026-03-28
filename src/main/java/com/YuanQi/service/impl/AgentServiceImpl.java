@@ -69,21 +69,7 @@ public class AgentServiceImpl extends ServiceImpl<AgentMapper, Agent> implements
     @Override
     public IPage<Agent> pageList(Integer page, Integer size, Long userId, Boolean onlyMine) {
         Page<Agent> pageParam = new Page<>(page, size);
-        LambdaQueryWrapper<Agent> wrapper = new LambdaQueryWrapper<>();
-
-        if (userId != null) {
-            if (onlyMine != null && onlyMine) {
-                // 只查该用户的
-                wrapper.eq(Agent::getUserId, userId);
-            } else {
-                // 查该用户的 + 公开的
-                wrapper.and(w -> w.eq(Agent::getUserId, userId).or().eq(Agent::getIsPublic, 1));
-            }
-        }
-        // userId为null时查全部
-
-        wrapper.orderByAsc(Agent::getSortOrder).orderByDesc(Agent::getCreateTime);
-        return page(pageParam, wrapper);
+        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine);
     }
 
     /**

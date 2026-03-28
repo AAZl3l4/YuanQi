@@ -24,6 +24,12 @@ public class Agent extends BaseEntity {
     private Long userId;
 
     /**
+     * 创建者用户名（展示用，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String username;
+
+    /**
      * 智能体名称
      */
     @NotBlank(message = "智能体名称不能为空")
