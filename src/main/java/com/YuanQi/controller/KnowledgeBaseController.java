@@ -54,7 +54,7 @@ public class KnowledgeBaseController {
      */
     @GetMapping("/{id}")
     public Result<KnowledgeBase> getById(@PathVariable Long id) {
-        KnowledgeBase knowledgeBase = knowledgeBaseService.getById(id);
+        KnowledgeBase knowledgeBase = knowledgeBaseService.checkOwner(id);
         return Result.success(knowledgeBase);
     }
 

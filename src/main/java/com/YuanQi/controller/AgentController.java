@@ -52,7 +52,7 @@ public class AgentController {
      */
     @GetMapping("/{id}")
     public Result<Agent> getById(@PathVariable Long id) {
-        Agent agent = agentService.getById(id);
+        Agent agent = agentService.checkAvailable(id);
         return Result.success(agent);
     }
 
