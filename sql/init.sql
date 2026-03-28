@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS api_key
 (
     id          BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     user_id     BIGINT      NOT NULL COMMENT '所属用户ID',
+    config_id   BIGINT      NOT NULL COMMENT '绑定的配置ID',
     key_name    VARCHAR(50)          DEFAULT NULL COMMENT 'Key名称（备注）',
     api_key     VARCHAR(64) NOT NULL COMMENT 'API Key（UUID）',
     expire_time DATETIME             DEFAULT NULL COMMENT '过期时间（NULL永不过期）',
@@ -187,6 +188,7 @@ CREATE TABLE IF NOT EXISTS api_key
     update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     INDEX idx_user_id (user_id),
+    INDEX idx_config_id (config_id),
     UNIQUE INDEX uk_api_key (api_key)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

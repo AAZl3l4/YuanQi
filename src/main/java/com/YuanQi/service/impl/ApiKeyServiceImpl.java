@@ -4,6 +4,7 @@ import cn.hutool.core.util.IdUtil;
 import com.YuanQi.mapper.ApiKeyMapper;
 import com.YuanQi.pojo.ApiKey;
 import com.YuanQi.service.ApiKeyService;
+import com.YuanQi.service.ApiRelayConfigService;
 import com.YuanQi.utils.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -21,11 +22,15 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ApiKeyServiceImpl extends ServiceImpl<ApiKeyMapper, ApiKey> implements ApiKeyService {
 
+    private final ApiRelayConfigService apiRelayConfigService;
+
     /**
      * 创建API Key
      */
     @Override
     public ApiKey create(ApiKey apiKey) {
+        // 验证配置存在且用户有权限使用
+        apiRelayConfigService.getConfigById(apiKey.getConfigId());
         // 生成UUID作为API Key
         apiKey.setApiKey(IdUtil.simpleUUID());
         apiKey.setStatus(1);

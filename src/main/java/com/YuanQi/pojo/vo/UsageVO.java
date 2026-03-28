@@ -32,4 +32,19 @@ public class UsageVO {
      * 生视频次数
      */
     private Long videoCount;
+
+    /**
+     * API中转调用次数
+     */
+    private Long relayCount;
+
+    /**
+     * 中转输入Token数
+     */
+    private Long relayInputTokens;
+
+    /**
+     * 中转输出Token数
+     */
+    private Long relayOutputTokens;
 }

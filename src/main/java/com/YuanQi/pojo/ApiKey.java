@@ -3,6 +3,7 @@ package com.YuanQi.pojo;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -27,6 +28,19 @@ public class ApiKey extends BaseEntity {
      */
     @TableField(exist = false)
     private String username;
+
+    /**
+     * 绑定的配置ID
+     */
+    @NotNull(message = "配置ID不能为空")
+    @TableField("config_id")
+    private Long configId;
+
+    /**
+     * 配置名称（展示用，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String configName;
 
     /**
      * Key名称（备注）
