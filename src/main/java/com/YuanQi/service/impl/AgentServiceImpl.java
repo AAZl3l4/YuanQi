@@ -29,6 +29,10 @@ public class AgentServiceImpl extends ServiceImpl<AgentMapper, Agent> implements
         Long userId = StpUtil.getLoginIdAsLong();
         agent.setUserId(userId);
         agent.setIsPublic(agent.getIsPublic() != null ? agent.getIsPublic() : 0);
+        // 空列表转为null
+        if (agent.getToolIds() != null && agent.getToolIds().isEmpty()) {
+            agent.setToolIds(null);
+        }
         save(agent);
         log.info("创建智能体: id={}, name={}", agent.getId(), agent.getName());
         return agent;
@@ -40,6 +44,10 @@ public class AgentServiceImpl extends ServiceImpl<AgentMapper, Agent> implements
     @Override
     public Agent update(Agent agent) {
         checkOwner(agent.getId());
+        // 空列表转为null
+        if (agent.getToolIds() != null && agent.getToolIds().isEmpty()) {
+            agent.setToolIds(null);
+        }
         updateById(agent);
         log.info("更新智能体: id={}", agent.getId());
         return agent;

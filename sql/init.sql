@@ -53,13 +53,19 @@ CREATE TABLE IF NOT EXISTS chat_message (
                                             role VARCHAR(20) NOT NULL COMMENT '角色：user-用户 assistant-助手 system-系统',
                                             content TEXT NOT NULL COMMENT '消息内容',
                                             model_used VARCHAR(50) DEFAULT NULL COMMENT '实际使用的模型（根据chat_type自动选择）',
-                                            input_tokens INT DEFAULT 0 COMMENT '输入Token数',
-                                            output_tokens INT DEFAULT 0 COMMENT '输出Token数',
+                                            agent_id BIGINT DEFAULT NULL COMMENT '智能体ID',
+                                            image_url VARCHAR(500) DEFAULT NULL COMMENT '图片地址',
+                                            document_url VARCHAR(500) DEFAULT NULL COMMENT '文档地址',
+                                            knowledge_base_id BIGINT DEFAULT NULL COMMENT '知识库ID',
+                                            tool_ids VARCHAR(255) DEFAULT NULL COMMENT 'MCP工具ID列表，JSON数组格式',
+                                            input_tokens INT DEFAULT NULL COMMENT '输入Token数',
+                                            output_tokens INT DEFAULT NULL COMMENT '输出Token数',
                                             deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
                                             create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                             PRIMARY KEY (id),
                                             INDEX idx_session_id (session_id),
                                             INDEX idx_role (role),
+                                            INDEX idx_agent_id (agent_id),
                                             INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='对话消息表';
 

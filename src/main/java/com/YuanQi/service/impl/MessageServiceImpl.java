@@ -152,6 +152,12 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         userMessage.setRole("user");
         userMessage.setContent(message);
         userMessage.setModelUsed(model);
+        userMessage.setAgentId(agent != null ? agent.getId() : null);
+        userMessage.setImageUrl(imageUrl != null && !imageUrl.isEmpty() ? imageUrl : null);
+        userMessage.setDocumentUrl(documentUrl != null && !documentUrl.isEmpty() ? documentUrl : null);
+        userMessage.setKnowledgeBaseId(knowledgeBaseId);
+        // 空列表转为null
+        userMessage.setToolIds(enabledTools != null && !enabledTools.isEmpty() ? enabledTools : null);
         chatMessageMapper.insert(userMessage);
 
         // 构建消息历史（支持文档和知识库）

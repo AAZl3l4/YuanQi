@@ -2,15 +2,18 @@ package com.YuanQi.pojo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.List;
 
 /**
  * 对话消息实体类
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("chat_message")
+@TableName(value = "chat_message", autoResultMap = true)
 public class ChatMessage extends BaseEntity {
 
     /**
@@ -36,6 +39,36 @@ public class ChatMessage extends BaseEntity {
      */
     @TableField("model_used")
     private String modelUsed;
+
+    /**
+     * 智能体ID
+     */
+    @TableField("agent_id")
+    private Long agentId;
+
+    /**
+     * 图片地址
+     */
+    @TableField("image_url")
+    private String imageUrl;
+
+    /**
+     * 文档地址
+     */
+    @TableField("document_url")
+    private String documentUrl;
+
+    /**
+     * 知识库ID
+     */
+    @TableField("knowledge_base_id")
+    private Long knowledgeBaseId;
+
+    /**
+     * MCP工具ID列表
+     */
+    @TableField(value = "tool_ids", typeHandler = JacksonTypeHandler.class)
+    private List<Long> toolIds;
 
     /**
      * 输入Token数
