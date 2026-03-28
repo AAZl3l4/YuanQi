@@ -1,0 +1,113 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: YuanQi
+
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/yuanqi?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf-8
+    username: root
+    password: 123456
+
+  # 邮件服务配置 - 用于邮箱验证
+  mail:
+    host:
+    port: 465
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+
+  # AI配置 - GLM API
+  ai:
+    zhipuai:
+      api-key:
+      base-url: https://open.bigmodel.cn/api/paas
+      chat:
+        options:
+          model: glm-4-flash-250414
+          temperature: 0.7
+    # Embedding模型配置（使用BAAI/bge-small-zh-v1.5中文Embedding模型）
+    embedding:
+      transformers:
+        model: BAAI/bge-small-zh-v1.5
+
+# Sa-Token配置
+sa-token:
+  # token名称
+  token-name: Authorization
+  # token有效期，单位秒，默认30天
+  timeout: 2592000
+  # token临时有效期，单位秒，-1代表永不过期
+  active-timeout: -1
+  # 是否允许同一账号并发登录
+  is-concurrent: true
+  # 是否共享token
+  is-share: false
+  # token风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+  # JWT秘钥
+  jwt-secret-key:
+
+# 自定义配置
+yuanqi:
+  # 加密密钥（用于password和api_key加解密）
+  crypto:
+    secret-key:
+  # 缓存配置
+  cache:
+    expire-minutes: 5
+    max-size: 10000
+  # 邮箱验证码配置
+  email:
+    code-expire: 300
+    code-length: 6
+  # 文件上传配置
+  file:
+    upload-path: ./uploads
+    max-size: 10MB
+  # RAG文档处理配置
+  rag:
+    # 文档分块大小（token数）
+    chunk-size: 500
+    # 分块重叠大小（token数）
+    overlap-size: 50
+    # 小文档阈值（文档分块数），小于此分块的直接注入上下文
+    small-doc-threshold: 5
+    # RAG检索返回的相关文档数量
+    rag-top-k: 5
+  # 默认AI模型配置
+  default-models:
+    chat: glm-4-flash-250414
+    chat-vision: glm-4v-flash
+    image: cogview-3-flash
+    video: cogvideox-flash
+
+# MyBatis-Plus配置
+mybatis-plus:
+  configuration:
+    #    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# 日志配置
+logging:
+  level:
+    root: info
+    com.YuanQi: debug
