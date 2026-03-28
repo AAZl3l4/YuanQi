@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.KnowledgeBaseMapper">
+
+    <!-- 分页查询知识库（带用户名） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.KnowledgeBase">
+        SELECT
+            kb.id,
+            kb.user_id,
+            u.username,
+            kb.name,
+            kb.description,
+            kb.document_url,
+            kb.chunk_ids,
+            kb.chunk_count,
+            kb.status,
+            kb.deleted,
+            kb.create_time,
+            kb.update_time
+        FROM knowledge_base kb
+        LEFT JOIN sys_user u ON kb.user_id = u.id
+        WHERE kb.deleted = 0
+        <if test="userId != null">
+            AND kb.user_id = #{userId}
+        </if>
+        ORDER BY kb.create_time DESC
+    </select>
+
+</mapper>

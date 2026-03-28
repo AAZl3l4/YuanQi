@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.AgentMapper">
+
+    <!-- 分页查询智能体（带用户名） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.Agent">
+        SELECT
+            a.id,
+            a.user_id,
+            u.username,
+            a.name,
+            a.description,
+            a.avatar,
+            a.system_prompt,
+            a.welcome_message,
+            a.knowledge_base_id,
+            a.tool_ids,
+            a.is_public,
+            a.sort_order,
+            a.deleted,
+            a.create_time,
+            a.update_time
+        FROM agent a
+        LEFT JOIN sys_user u ON a.user_id = u.id
+        WHERE a.deleted = 0
+        <if test="userId != null">
+            <if test="onlyMine == true">
+                AND a.user_id = #{userId}
+            </if>
+            <if test="onlyMine == false or onlyMine == null">
+                AND (a.user_id = #{userId} OR a.is_public = 1)
+            </if>
+        </if>
+        ORDER BY a.sort_order ASC, a.create_time DESC
+    </select>
+
+</mapper>

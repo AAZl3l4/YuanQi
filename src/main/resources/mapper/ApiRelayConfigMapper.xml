@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.ApiRelayConfigMapper">
+
+    <!-- 分页查询API中转配置（带用户名） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.ApiRelayConfig">
+        SELECT
+            arc.id,
+            arc.user_id,
+            u.username,
+            arc.name,
+            arc.description,
+            arc.persona_prompt,
+            arc.is_public,
+            arc.deleted,
+            arc.create_time,
+            arc.update_time
+        FROM api_relay_config arc
+        LEFT JOIN sys_user u ON arc.user_id = u.id
+        WHERE arc.deleted = 0
+        <if test="userId != null">
+            <if test="onlyMine == true">
+                AND arc.user_id = #{userId}
+            </if>
+            <if test="onlyMine == false or onlyMine == null">
+                AND (arc.user_id = #{userId} OR arc.is_public = 1)
+            </if>
+        </if>
+        ORDER BY arc.create_time DESC
+    </select>
+
+</mapper>

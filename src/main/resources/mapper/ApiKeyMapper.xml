@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.YuanQi.mapper.ApiKeyMapper">
+
+    <!-- 分页查询API Key（带用户名） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.ApiKey">
+        SELECT
+            ak.id,
+            ak.user_id,
+            u.username,
+            ak.key_name,
+            ak.api_key,
+            ak.expire_time,
+            ak.status,
+            ak.deleted,
+            ak.create_time,
+            ak.update_time
+        FROM api_key ak
+        LEFT JOIN sys_user u ON ak.user_id = u.id
+        WHERE ak.deleted = 0
+        <if test="userId != null">
+            AND ak.user_id = #{userId}
+        </if>
+        ORDER BY ak.create_time DESC
+    </select>
+
+</mapper>
