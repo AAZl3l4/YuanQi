@@ -175,8 +175,9 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                         },
                         error -> { // 发生错误时执行
                             log.error("流式对话失败", error);
+                            String errorMsg = parseApiError(error);
                             try {
-                                emitter.send(SseEmitter.event().name("error").data("对话失败: " + error.getMessage()));
+                                emitter.send(SseEmitter.event().name("").data(errorMsg));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -574,5 +575,33 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             log.warn("生成会话标题失败，使用默认标题: {}", e.getMessage());
             return message.length() > 20 ? message.substring(0, 20) : message;
         }
+    }
+
+    /**
+     * 解析API错误信息
+     */
+    private String parseApiError(Throwable error) {
+        String message = error.getMessage();
+        if (message == null) {
+            return "对话失败，请稍后重试";
+        }
+        // 400错误：模型不存在
+        if (message.contains("400") || message.contains("Bad Request")) {
+            return "模型不存在或参数错误，请检查模型配置";
+        }
+        // 401错误：API Key无效
+        if (message.contains("401") || message.contains("Unauthorized")) {
+            return "API Key无效，请检查配置";
+        }
+        // 429错误：限速或无权限
+        if (message.contains("429") || message.contains("Too Many Requests") || message.contains("Rate limit")) {
+            return "请求过于频繁或该模型无调用权限，请稍后重试";
+        }
+        // 500错误：服务端错误
+        if (message.contains("500") || message.contains("Internal Server Error")) {
+            return "AI服务暂时不可用，请稍后重试";
+        }
+        // 其他错误
+        return "对话失败: " + message;
     }
 }

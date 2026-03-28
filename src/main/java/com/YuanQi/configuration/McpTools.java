@@ -27,7 +27,7 @@ public class McpTools {
     private List<ToolCallback> allToolCallbacks;
 
     /**
-     * 初始化所有工具回调
+     * 初始化所有工具回调 这里注册成bean也行
      */
     @PostConstruct
     public void init() {

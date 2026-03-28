@@ -110,28 +110,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * API限流异常处理（429）
-     */
-    @ExceptionHandler(WebClientResponseException.TooManyRequests.class)
-    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
-    public Result<Void> handleTooManyRequests(WebClientResponseException.TooManyRequests ex) {
-        log.warn("API请求过于频繁: {}", ex.getMessage());
-        return Result.error(429, "AI服务请求过于频繁，请稍后再试");
-    }
-
-    /**
-     * WebClient响应异常处理
-     */
-    @ExceptionHandler(WebClientResponseException.class)
-    public Result<Void> handleWebClientResponseException(WebClientResponseException ex) {
-        log.error("AI服务调用异常: status={}, message={}", ex.getStatusCode(), ex.getMessage());
-        if (ex.getStatusCode().value() == 429) {
-            return Result.error(429, "AI服务请求过于频繁，请稍后再试");
-        }
-        return Result.error("AI服务调用失败: " + ex.getStatusText());
-    }
-
-    /**
      * 运行时异常处理
      */
     @ExceptionHandler(RuntimeException.class)
