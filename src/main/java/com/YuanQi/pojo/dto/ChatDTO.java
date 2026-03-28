@@ -52,4 +52,10 @@ public class ChatDTO {
     @Min(value = 0, message = "上下文轮数不能为负数")
     @Max(value = 20, message = "上下文轮数最多20轮")
     private Integer contextRounds = 10;
+
+    /**
+     * 是否生成应用（网页预览）
+     * 最后使用 glm-4.7-flash 进行生成
+     */
+    private Boolean generateApp = false;
 }

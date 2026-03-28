@@ -106,6 +106,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         Long knowledgeBaseId = chatDTO.getKnowledgeBaseId();
         Integer contextRounds = chatDTO.getContextRounds();
         List<Long> enabledTools = chatDTO.getEnabledTools();
+        Boolean generateApp = chatDTO.getGenerateApp();
 
         // 验证会话归属，获取会话信息
         ChatSession session = sessionService.checkSessionOwner(sessionId);
@@ -161,7 +162,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         chatMessageMapper.insert(userMessage);
 
         // 构建消息历史（支持文档和知识库）
-        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds, systemPrompt, enabledTools);
+        List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds, systemPrompt, enabledTools, generateApp);
 
         // 获取用户选择的工具
         List<ToolCallback> tools = getTools(enabledTools);
@@ -244,10 +245,10 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
     /**
      * 构建消息历史上下文
-     * 支持图片、文档、知识库
+     * 支持图片、文档、知识库、生成应用
      */
     private List<Message> buildMessageHistory(String sessionId, String currentMessage, String imageUrl, 
-            String documentUrl, Long knowledgeBaseId, Integer contextRounds, String systemPrompt, List<Long> enabledTools) {
+            String documentUrl, Long knowledgeBaseId, Integer contextRounds, String systemPrompt, List<Long> enabledTools, Boolean generateApp) {
         List<Message> messages = new ArrayList<>();
 
         // 构建系统提示词
@@ -257,6 +258,11 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
 
         messages.add(new SystemMessage(systemPrompt));
+
+        // 生成应用时追加前端开发专家提示词
+        if (Boolean.TRUE.equals(generateApp)) {
+            messages.add(new SystemMessage("[系统提示]你是一个前端开发专家。用户会描述需求，你需要生成一个完整的、单文件的HTML代码。代码用```html代码块包裹"));
+        }
 
         // 根据轮数计算消息条数（1轮=2条消息）
         int messageLimit = contextRounds * 2;
