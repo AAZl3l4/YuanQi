@@ -40,6 +40,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -307,7 +308,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             // 图文消息：带图片的UserMessage
             try {
                 Media imageMedia = Media.builder()
-                        .mimeType(MimeTypeUtils.IMAGE_JPEG)
+                        .mimeType(getImageMimeType(imageUrl))
                         .data(new UrlResource(new URL(imageUrl)))
                         .build();
                 messages.add(UserMessage.builder()
@@ -626,12 +627,32 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     }
 
     /**
+     * 根据图片URL后缀获取MIME类型
+     */
+    public static MimeType getImageMimeType(String imageUrl) {
+        String url = imageUrl.toLowerCase();
+        if (url.contains(".png")) {
+            return MimeTypeUtils.IMAGE_PNG;
+        } else if (url.contains(".gif")) {
+            return MimeTypeUtils.IMAGE_GIF;
+        } else if (url.contains(".webp")) {
+            return MimeType.valueOf("image/webp");
+        }
+        // 默认返回JPEG
+        return MimeTypeUtils.IMAGE_JPEG;
+    }
+
+    /**
      * 解析API错误信息
      */
-    private String parseApiError(Throwable error) {
+    public static String parseApiError(Throwable error) {
         String message = error.getMessage();
         if (message == null) {
             return "对话失败，请稍后重试";
+        }
+        // 图片格式错误
+        if (message.contains("1210") || message.contains("图片输入格式") || message.contains("图片解析错误")) {
+            return "图片格式不支持或解析失败，请尝试其他图片";
         }
         // 400错误：模型不存在
         if (message.contains("400") || message.contains("Bad Request")) {

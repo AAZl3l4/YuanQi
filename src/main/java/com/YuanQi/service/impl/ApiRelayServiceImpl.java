@@ -26,7 +26,6 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.content.Media;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeTypeUtils;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -116,7 +115,8 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             log.error("API中转调用失败: {}", e.getMessage());
             // 保存失败记录
             saveLog(key, config, message, imageUrl, null, model, estimatedInputTokens, 0);
-            throw new RuntimeException("调用失败: " + e.getMessage());
+            // 使用统一的错误解析
+            throw new BusinessException(MessageServiceImpl.parseApiError(e));
         }
     }
 
@@ -138,7 +138,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         if (imageUrl != null && !imageUrl.isEmpty()) {
             try {
                 Media imageMedia = Media.builder()
-                        .mimeType(MimeTypeUtils.IMAGE_JPEG)
+                        .mimeType(MessageServiceImpl.getImageMimeType(imageUrl))
                         .data(new UrlResource(new URL(imageUrl)))
                         .build();
                 messages.add(UserMessage.builder()
