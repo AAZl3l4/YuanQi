@@ -108,6 +108,11 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         List<Long> enabledTools = chatDTO.getEnabledTools();
         Boolean generateApp = chatDTO.getGenerateApp();
 
+        // 校验：消息内容和图片至少填一项
+        if ((message == null || message.isEmpty()) && (imageUrl == null || imageUrl.isEmpty())) {
+            throw new BusinessException("消息内容和图片不能同时为空");
+        }
+
         // 验证会话归属，获取会话信息
         ChatSession session = sessionService.checkSessionOwner(sessionId);
         Agent agent = null;

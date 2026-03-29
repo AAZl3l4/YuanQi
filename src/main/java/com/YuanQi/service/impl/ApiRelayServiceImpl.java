@@ -10,6 +10,7 @@ import com.YuanQi.service.ApiKeyService;
 import com.YuanQi.service.ApiRelayConfigService;
 import com.YuanQi.service.ApiRelayService;
 import com.YuanQi.service.UserService;
+import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -62,6 +63,11 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
      */
     @Override
     public String call(String apiKey, String message, String imageUrl) {
+        // 校验：消息内容和图片至少填一项
+        if ((message == null || message.isEmpty()) && (imageUrl == null || imageUrl.isEmpty())) {
+            throw new BusinessException("消息内容和图片不能同时为空");
+        }
+
         // 验证API Key
         ApiKey key = apiKeyService.validateAndGet(apiKey);
         

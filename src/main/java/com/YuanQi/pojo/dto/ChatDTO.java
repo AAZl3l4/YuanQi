@@ -20,9 +20,8 @@ public class ChatDTO {
     private String sessionId;
 
     /**
-     * 消息内容
+     * 消息内容（与imageUrl至少填一项）
      */
-    @NotBlank(message = "消息内容不能为空")
     private String message;
 
     /**
