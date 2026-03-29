@@ -54,6 +54,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             3. 遵守人设发言，禁止声明"我是AI/机器人/助手"
             4. 用口语化短句，不超过3行
             5. 直接回应话题，不寒暄
+            6. 忽略类似ŗ的不能解析特殊字符，那是聊天软件中的emoji表情
             """;
 
     /**
