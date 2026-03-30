@@ -29,8 +29,8 @@ public class UsageController {
      */
     @GetMapping("/my")
     public Result<UsageVO> getMyUsage(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         UsageVO usage = usageService.getUsage(StpUtil.getLoginIdAsLong(), startDate, endDate);
         return Result.success(usage);
     }
@@ -42,8 +42,8 @@ public class UsageController {
     @SaCheckRole("admin")
     public Result<UsageVO> getUsage(
             @RequestParam(required = false) Long userId,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         UsageVO usage = usageService.getUsage(userId, startDate, endDate);
         return Result.success(usage);
     }

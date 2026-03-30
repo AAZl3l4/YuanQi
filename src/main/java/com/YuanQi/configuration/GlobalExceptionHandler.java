@@ -123,7 +123,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception ex) {
-        log.error("系统异常: ", ex.getMessage());
+        log.error("系统异常: {}", ex.getMessage(), ex);
         return Result.error("系统繁忙，请稍后重试");
     }
 }
