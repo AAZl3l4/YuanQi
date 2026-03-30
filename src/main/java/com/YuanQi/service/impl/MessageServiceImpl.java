@@ -634,42 +634,16 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
     public static MimeType getImageMimeType(String imageUrl) {
         String url = imageUrl.toLowerCase();
 
-        // 先尝试从URL后缀判断
+        // 有后缀时判断格式
         if (url.contains(".png")) {
             return MimeTypeUtils.IMAGE_PNG;
         } else if (url.contains(".jpg") || url.contains(".jpeg")) {
             return MimeTypeUtils.IMAGE_JPEG;
         } else if (url.contains(".gif") || url.contains(".webp") || url.contains(".bmp")) {
-            // 不支持的格式，直接抛异常
             throw new BusinessException("图片格式不支持，仅支持jpg、png、jpeg格式");
         }
 
-        // 没有后缀时，发送GET请求获取Content-Type
-        try {
-            log.info("根据图片URL获取MIME类型: {}", imageUrl);
-            HttpResponse response = HttpRequest.get(imageUrl)
-                    .timeout(3000)
-                    .execute();
-            String contentType = response.header("Content-Type");
-            response.close();
-
-            if (contentType != null && contentType.startsWith("image/")) {
-                // 检查是否为支持的格式
-                if (contentType.contains("png")) {
-                    return MimeTypeUtils.IMAGE_PNG;
-                } else if (contentType.contains("jpeg") || contentType.contains("jpg")) {
-                    return MimeTypeUtils.IMAGE_JPEG;
-                } else {
-                    throw new BusinessException("图片格式不支持，仅支持jpg、png、jpeg格式");
-                }
-            }
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            log.warn("无法获取图片Content-Type: {}", e.getMessage());
-        }
-
-        // 无法判断时默认JPEG
+        // 没有后缀，默认返回JPEG(PNG图片传JPEG也能兼容)
         return MimeTypeUtils.IMAGE_JPEG;
     }
 
