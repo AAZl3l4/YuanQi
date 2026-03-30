@@ -6,12 +6,14 @@ import cn.dev33.satoken.exception.NotRoleException;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -107,6 +109,22 @@ public class GlobalExceptionHandler {
     public Result<Void> handleNoResourceFoundException(NoResourceFoundException ex) {
         log.warn("资源未找到: {}", ex.getMessage());
         return Result.error(404, "请求的资源不存在");
+    }
+
+    /**
+     * Tomcat客户端断开连接异常（静默处理）
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbortException(ClientAbortException ex) {
+        log.debug("客户端断开连接: {}", ex.getMessage());
+    }
+
+    /**
+     * SSE客户端断开连接异常（静默处理）
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void handleAsyncRequestNotUsableException(AsyncRequestNotUsableException ex) {
+        log.debug("客户端断开连接: {}", ex.getMessage());
     }
 
     /**

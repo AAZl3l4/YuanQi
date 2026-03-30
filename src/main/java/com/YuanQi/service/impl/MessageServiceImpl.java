@@ -50,6 +50,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -192,6 +193,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
                 StringBuilder fullResponse = new StringBuilder();
                 // 使用Tik Token估算输入Token（历史消息 + 当前消息）
+                AtomicBoolean emitterCompleted = new AtomicBoolean(false);
                 int estimatedInputTokens = TokenUtil.estimateTokens(
                         messages.stream().map(Message::getText).toList()
                 );
@@ -200,22 +202,26 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                 // 订阅流式响应
                 stream.subscribe(
                         response -> { // 收到数据块时执行
+                            if (emitterCompleted.get()) return;
                             try {
                                 String content = response.getResult().getOutput().getText();
                                 if (content != null && !content.isEmpty()) {
                                     fullResponse.append(content);
                                     emitter.send(SseEmitter.event().name("message").data(content));
                                 }
-
+                            } catch (IllegalStateException e) {
+                                emitterCompleted.set(true);
+                                log.debug("SSE连接已断开");
                             } catch (Exception e) {
                                 log.error("发送SSE消息失败", e);
                             }
                         },
                         error -> { // 发生错误时执行
+                            if (emitterCompleted.get()) return;
                             log.error("流式对话失败", error);
                             String errorMsg = parseApiError(error);
                             try {
-                                emitter.send(SseEmitter.event().name("").data(errorMsg));
+                                emitter.send(SseEmitter.event().name("error").data(errorMsg));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -223,6 +229,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                         },
                         () -> { // 流完成时执行
                             // 估算输出Token（AI回复内容）
+                            if (emitterCompleted.get()) return;
                             int estimatedOutputTokens = TokenUtil.estimateTokens(fullResponse.toString());
                             log.debug("估算输出Token: {}", estimatedOutputTokens);
                             // 保存AI回复（携带Token统计）
