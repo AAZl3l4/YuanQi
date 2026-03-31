@@ -169,6 +169,9 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         // 空列表转为null
         userMessage.setToolIds(enabledTools != null && !enabledTools.isEmpty() ? enabledTools : null);
         chatMessageMapper.insert(userMessage);
+        
+        // 更新会话的更新时间
+        sessionService.updateSessionTime(sessionId);
 
         // 构建消息历史（支持文档和知识库）
         List<Message> messages = buildMessageHistory(sessionId, message, imageUrl, documentUrl, knowledgeBaseId, contextRounds, systemPrompt, enabledTools, generateApp);

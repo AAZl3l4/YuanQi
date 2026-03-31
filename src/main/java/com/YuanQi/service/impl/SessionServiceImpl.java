@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -76,7 +77,7 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
         return chatSessionMapper.selectPage(pageParam,
                 new LambdaQueryWrapper<ChatSession>()
                         .eq(ChatSession::getUserId, userId)
-                        .orderByDesc(ChatSession::getCreateTime)
+                        .orderByDesc(ChatSession::getUpdateTime)
         );
     }
 
@@ -142,5 +143,20 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
         );
 
         return messageCount == 0;
+    }
+
+    /**
+     * 更新会话的更新时间
+     */
+    @Override
+    public void updateSessionTime(String sessionId) {
+        ChatSession session = chatSessionMapper.selectOne(
+                new LambdaQueryWrapper<ChatSession>()
+                        .eq(ChatSession::getSessionId, sessionId)
+        );
+        if (session != null) {
+            session.setUpdateTime(LocalDateTime.now());
+            chatSessionMapper.updateById(session);
+        }
     }
 }

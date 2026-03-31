@@ -39,4 +39,9 @@ public interface SessionService extends IService<ChatSession> {
      * 检测是否是首次对话
      */
     Boolean isFirstMessage(String sessionId);
+
+    /**
+     * 更新会话的更新时间
+     */
+    void updateSessionTime(String sessionId);
 }
