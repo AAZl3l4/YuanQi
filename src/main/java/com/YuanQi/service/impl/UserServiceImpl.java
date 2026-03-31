@@ -125,11 +125,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void login(UserDTO userDTO) {
-        // 校验验证码 TODO 测试环境先注释
-//        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + userDTO.getEmail());
-//        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
-//            throw new BusinessException("验证码错误或已过期");
-//        }
+        // 校验验证码
+        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + userDTO.getEmail());
+        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
+            throw new BusinessException("验证码错误或已过期");
+        }
 
         // 查询用户
         User user = getOne(new LambdaQueryWrapper<User>().eq(User::getEmail, userDTO.getEmail()));
