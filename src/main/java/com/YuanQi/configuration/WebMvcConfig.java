@@ -35,7 +35,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/user/sendEmailCode",
                         "/file/**",
                         "/error",
-                        "/user/send-email/**",
+                        "/user/send-code/**",
                         "/message/stream",  // SSE接口在Controller中手动校验
                         "/relay/call"       // API中转调用接口（API Key验证）
                 );
