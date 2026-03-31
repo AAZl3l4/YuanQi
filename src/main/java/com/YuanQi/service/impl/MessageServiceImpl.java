@@ -43,6 +43,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
@@ -207,7 +208,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                                 String content = response.getResult().getOutput().getText();
                                 if (content != null && !content.isEmpty()) {
                                     fullResponse.append(content);
-                                    emitter.send(SseEmitter.event().name("message").data(content));
+                                    emitter.send(SseEmitter.event().name("message").data(content, MediaType.TEXT_PLAIN));
                                 }
                             } catch (IllegalStateException e) {
                                 emitterCompleted.set(true);
@@ -221,7 +222,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                             log.error("流式对话失败", error);
                             String errorMsg = parseApiError(error);
                             try {
-                                emitter.send(SseEmitter.event().name("error").data(errorMsg));
+                                emitter.send(SseEmitter.event().name("error").data(errorMsg, MediaType.TEXT_PLAIN));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -235,7 +236,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                             // 保存AI回复（携带Token统计）
                             saveAssistantMessage(sessionId, fullResponse.toString(), model, estimatedInputTokens, estimatedOutputTokens);
                             try {
-                                emitter.send(SseEmitter.event().name("complete").data("done"));
+                                emitter.send(SseEmitter.event().name("complete").data("done", MediaType.TEXT_PLAIN));
                                 emitter.complete();
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
@@ -246,7 +247,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             } catch (Exception e) {
                 log.error("对话处理失败", e);
                 try {
-                    emitter.send(SseEmitter.event().name("error").data("系统错误: " + e.getMessage()));
+                    emitter.send(SseEmitter.event().name("error").data("系统错误: " + e.getMessage(), MediaType.TEXT_PLAIN));
                     emitter.complete();
                 } catch (Exception ex) {
                     emitter.completeWithError(ex);
