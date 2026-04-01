@@ -1,0 +1,70 @@
+:root {
+  /* Brand Colors - High-end Champagne & Deep Gold */
+  --color-primary: #C49F57;
+  --color-primary-light: #F0E3CB;
+  --color-primary-dark: #A38241;
+  
+  /* Modern Backgrounds - Glassy & Dynamic */
+  --color-bg: #f8f9fc;
+  --color-bg-secondary: rgba(255, 255, 255, 0.85); /* For glass panes */
+  --color-bg-tertiary: #ffffff;
+  --color-bg-glass: rgba(255, 255, 255, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.5);
+  
+  /* Text */
+  --color-text: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-light: rgba(229, 231, 235, 0.6);
+  
+  /* Semantic */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #6b7280;
+  --color-white: #FFFFFF;
+  
+  /* Shadows - Smooth, multi-layered */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 6px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 15px 35px -5px rgba(0, 0, 0, 0.07), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.05); /* Soft deep shadow for floating */
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  
+  /* Fonts */
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  
+  /* Font Sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 19px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 26px;
+  
+  /* Layout Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Structural Variables */
+  --sidebar-width: 280px; /* Slightly wider for modern look */
+  --header-height: 64px;
+}
