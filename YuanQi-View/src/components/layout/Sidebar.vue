@@ -49,6 +49,8 @@ const adminItems = computed(() => {
     { path: '/admin/mcp', icon: 'Tools', label: 'MCP工具' },
     { path: '/admin/agent', icon: 'UserFilled', label: '智能体管理' },
     { path: '/admin/knowledge', icon: 'Collection', label: '知识库管理' },
+    { path: '/admin/relay-config', icon: 'Connection', label: '中转配置' },
+    { path: '/admin/relay-logs', icon: 'DataLine', label: '调用记录' },
     { path: '/admin/content', icon: 'Picture', label: '生成记录' },
     { path: '/admin/usage', icon: 'DataLine', label: '用量统计' }
   ]

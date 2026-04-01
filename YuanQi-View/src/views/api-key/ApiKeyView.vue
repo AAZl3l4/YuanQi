@@ -1,16 +1,28 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getMyApiKeys, createApiKey, deleteMyApiKey } from '@/api/apiKey'
-import { getRelayConfigList } from '@/api/relay'
+import { getRelayConfigList, getMyRelayLogs } from '@/api/relay'
 import { uploadFile } from '@/api/file'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const apiKeys = ref([])
 const configs = ref([])
+const logs = ref([])
 const loading = ref(false)
+const logsLoading = ref(false)
 const dialogVisible = ref(false)
 const testDialogVisible = ref(false)
 const formRef = ref()
+const activeTab = ref('keys')
+const expandedLogs = ref(new Set())
+const imagePreviewVisible = ref(false)
+const previewImageUrl = ref('')
+
+const logsPagination = ref({
+  page: 1,
+  size: 100,
+  total: 0
+})
 
 const form = ref({
   configId: null,
@@ -57,6 +69,29 @@ const loadConfigs = async () => {
   } catch (error) {
     console.error(error)
   }
+}
+
+const loadLogs = async () => {
+  logsLoading.value = true
+  try {
+    const res = await getMyRelayLogs({ 
+      page: logsPagination.value.page, 
+      size: logsPagination.value.size 
+    })
+    if (res.code === 200) {
+      logs.value = res.data.records || []
+      logsPagination.value.total = res.data.total || 0
+    }
+  } catch (error) {
+    console.error(error)
+  } finally {
+    logsLoading.value = false
+  }
+}
+
+const handleLogsPageChange = (page) => {
+  logsPagination.value.page = page
+  loadLogs()
 }
 
 const handleCreate = async () => {
@@ -173,6 +208,27 @@ const copyResponse = () => {
   }
 }
 
+const handleTabChange = (tab) => {
+  if (tab === 'logs' && logs.value.length === 0) {
+    loadLogs()
+  }
+}
+
+const toggleLog = (id) => {
+  if (expandedLogs.value.has(id)) {
+    expandedLogs.value.delete(id)
+  } else {
+    expandedLogs.value.add(id)
+  }
+}
+
+const isLogExpanded = (id) => expandedLogs.value.has(id)
+
+const openImagePreview = (url) => {
+  previewImageUrl.value = url
+  imagePreviewVisible.value = true
+}
+
 onMounted(() => {
   loadApiKeys()
   loadConfigs()
@@ -182,44 +238,125 @@ onMounted(() => {
 <template>
   <div class="api-key-view page-container">
     <div class="page-header">
-      <h2 class="page-title">API Key 管理</h2>
+      <h2 class="page-title">
+        <el-icon class="title-icon"><Key /></el-icon>
+        API Key 管理
+      </h2>
       <el-button type="primary" @click="dialogVisible = true">
         <el-icon><Plus /></el-icon>
         新建Key
       </el-button>
     </div>
     
-    <el-table :data="apiKeys" v-loading="loading" class="card">
-      <el-table-column prop="keyName" label="名称" width="150" />
-      <el-table-column prop="apiKey" label="API Key" min-width="200">
-        <template #default="{ row }">
-          <div class="api-key-cell">
-            <code>{{ row.apiKey }}</code>
-            <el-button text size="small" @click="copyToClipboard(row.apiKey)">
-              <el-icon><CopyDocument /></el-icon>
-            </el-button>
+    <el-tabs v-model="activeTab" class="content-tabs" @tab-change="handleTabChange">
+      <el-tab-pane label="API Key" name="keys">
+        <el-table :data="apiKeys" v-loading="loading" class="card">
+          <el-table-column prop="keyName" label="名称" width="150" />
+          <el-table-column prop="apiKey" label="API Key" min-width="200">
+            <template #default="{ row }">
+              <div class="api-key-cell">
+                <code>{{ row.apiKey }}</code>
+                <el-button text size="small" @click="copyToClipboard(row.apiKey)">
+                  <el-icon><CopyDocument /></el-icon>
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="configName" label="关联配置" width="150" />
+          <el-table-column prop="expireTime" label="过期时间" width="180">
+            <template #default="{ row }">
+              {{ row.expireTime || '永不过期' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" width="180" />
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
+              <el-button text type="primary" @click="openTestDialog(row.apiKey)">
+                测试
+              </el-button>
+              <el-button text type="danger" @click="handleDelete(row.id)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      
+      <el-tab-pane label="调用记录" name="logs">
+        <div class="logs-container" v-loading="logsLoading">
+          <div class="logs-grid">
+            <div v-for="log in logs" :key="log.id" class="log-card card">
+              <div class="log-header">
+                <div class="config-info">
+                  <span class="config-label">配置</span>
+                  <span class="config-value">{{ log.configId || '-' }}</span>
+                </div>
+                <span class="log-time">{{ log.createTime }}</span>
+              </div>
+              <div class="log-body">
+                <div class="log-message" v-if="log.inputMessage">
+                  <div class="message-header" @click="toggleLog('i' + log.id)">
+                    <span class="label">消息</span>
+                    <el-icon class="expand-icon" :class="{ expanded: isLogExpanded('i' + log.id) }">
+                      <ArrowDown />
+                    </el-icon>
+                  </div>
+                  <div class="message-content" :class="{ expanded: isLogExpanded('i' + log.id) }">
+                    {{ log.inputMessage }}
+                  </div>
+                </div>
+                <div class="log-response" v-if="log.outputMessage">
+                  <div class="response-header" @click="toggleLog('o' + log.id)">
+                    <span class="label">响应</span>
+                    <el-icon class="expand-icon" :class="{ expanded: isLogExpanded('o' + log.id) }">
+                      <ArrowDown />
+                    </el-icon>
+                  </div>
+                  <div class="response-content" :class="{ expanded: isLogExpanded('o' + log.id) }">
+                    {{ log.outputMessage }}
+                  </div>
+                </div>
+                <div class="log-image" v-if="log.imageUrl">
+                  <span class="label">图片</span>
+                  <div class="image-wrapper" @click="openImagePreview(log.imageUrl)">
+                    <img :src="log.imageUrl" alt="调用图片" />
+                    <div class="image-tip">点击查看大图</div>
+                  </div>
+                  <div class="image-notice">
+                    <el-icon><Warning /></el-icon>
+                    <span>QQ图片可能无法正常显示</span>
+                  </div>
+                </div>
+              </div>
+              <div class="log-footer">
+                <div class="token-info">
+                  <span class="token-item">
+                    <el-icon><Upload /></el-icon>
+                    {{ log.inputTokens || 0 }}
+                  </span>
+                  <span class="token-item">
+                    <el-icon><Download /></el-icon>
+                    {{ log.outputTokens || 0 }}
+                  </span>
+                  <span class="model-tag" v-if="log.modelUsed">{{ log.modelUsed }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="expireTime" label="过期时间" width="180">
-        <template #default="{ row }">
-          {{ row.expireTime || '永不过期' }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" width="180" />
-      <el-table-column label="操作" width="180" fixed="right">
-        <template #default="{ row }">
-          <el-button text type="primary" @click="openTestDialog(row.apiKey)">
-            测试
-          </el-button>
-          <el-button text type="danger" @click="handleDelete(row.id)">
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+          <el-empty v-if="!logsLoading && logs.length === 0" description="暂无调用记录" />
+          <div class="pagination-wrapper" v-if="logsPagination.total > 0">
+            <el-pagination
+              v-model:current-page="logsPagination.page"
+              :page-size="logsPagination.size"
+              :total="logsPagination.total"
+              layout="total, prev, pager, next"
+              @current-change="handleLogsPageChange"
+            />
+          </div>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
     
-    <!-- 新建API Key弹窗 -->
     <el-dialog v-model="dialogVisible" title="新建API Key" width="500px" class="custom-dialog">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="keyName">
@@ -250,7 +387,6 @@ onMounted(() => {
       </template>
     </el-dialog>
     
-    <!-- 测试弹窗 -->
     <el-dialog 
       v-model="testDialogVisible" 
       title="API中转测试" 
@@ -259,7 +395,6 @@ onMounted(() => {
       :close-on-click-modal="false"
     >
       <div class="test-content">
-        <!-- API Key 显示 -->
         <div class="api-key-display">
           <span class="label">API Key</span>
           <div class="key-value">
@@ -270,7 +405,6 @@ onMounted(() => {
           </div>
         </div>
         
-        <!-- 输入区域 -->
         <div class="input-section">
           <div class="section-title">
             <el-icon><EditPen /></el-icon>
@@ -279,7 +413,6 @@ onMounted(() => {
           </div>
           
           <div class="input-row">
-            <!-- 消息输入 -->
             <div class="message-input">
               <el-input
                 v-model="testForm.message"
@@ -290,7 +423,6 @@ onMounted(() => {
               />
             </div>
             
-            <!-- 图片上传 -->
             <div class="image-upload">
               <div v-if="!testForm.imageUrl" class="upload-area">
                 <el-upload
@@ -319,7 +451,6 @@ onMounted(() => {
           </div>
         </div>
         
-        <!-- 发送按钮 -->
         <div class="action-bar">
           <el-button 
             type="primary" 
@@ -332,7 +463,6 @@ onMounted(() => {
           </el-button>
         </div>
         
-        <!-- 响应结果 -->
         <div class="response-section">
           <div class="section-title">
             <el-icon><Document /></el-icon>
@@ -357,7 +487,6 @@ onMounted(() => {
           </div>
         </div>
         
-        <!-- 使用提示 -->
         <div class="usage-tips">
           <div class="tips-header">
             <el-icon><InfoFilled /></el-icon>
@@ -369,6 +498,15 @@ onMounted(() => {
   -d '{"message": "你好"}'</pre>
         </div>
       </div>
+    </el-dialog>
+    
+    <el-dialog 
+      v-model="imagePreviewVisible" 
+      title="图片预览" 
+      width="800px"
+      class="image-preview-dialog"
+    >
+      <img :src="previewImageUrl" alt="预览图片" class="preview-image-full" />
     </el-dialog>
   </div>
 </template>
@@ -385,6 +523,23 @@ onMounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
+.page-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 22px;
+}
+
+.title-icon {
+  color: var(--color-primary);
+  font-size: 24px;
+}
+
+.content-tabs {
+  background: var(--color-bg);
+}
+
 .api-key-cell {
   display: flex;
   align-items: center;
@@ -399,7 +554,230 @@ onMounted(() => {
   border-radius: var(--radius-sm);
 }
 
-/* 测试弹窗样式 */
+.logs-container {
+  min-height: 300px;
+}
+
+.logs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.log-card {
+  padding: var(--spacing-md);
+  transition: all 0.3s ease;
+}
+
+.log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.config-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.config-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.config-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.log-time {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.log-body {
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.log-message,
+.log-response {
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: var(--spacing-sm);
+}
+
+.message-header,
+.response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.message-header:hover .label,
+.response-header:hover .label {
+  color: var(--color-primary);
+}
+
+.expand-icon {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.log-body .label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  transition: color 0.2s;
+}
+
+.message-content,
+.response-content {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-top: var(--spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  transition: all 0.3s ease;
+}
+
+.message-content.expanded,
+.response-content.expanded {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+
+.log-image {
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: var(--spacing-sm);
+}
+
+.log-image .label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: block;
+  margin-bottom: var(--spacing-xs);
+}
+
+.image-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.image-wrapper img {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  transition: opacity 0.2s;
+}
+
+.image-wrapper:hover img {
+  opacity: 0.8;
+}
+
+.image-wrapper:hover .image-tip {
+  opacity: 1;
+}
+
+.image-tip {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-notice {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--spacing-xs);
+  font-size: 11px;
+  color: var(--color-warning);
+}
+
+.image-notice .el-icon {
+  font-size: 12px;
+}
+
+.log-footer {
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.token-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.token-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.token-item .el-icon {
+  font-size: 12px;
+}
+
+.model-tag {
+  font-size: 11px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.preview-image-full {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
 .test-content {
   display: flex;
   flex-direction: column;

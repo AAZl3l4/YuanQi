@@ -21,6 +21,7 @@ const isEdit = ref(false)
 const knowledgeBases = ref([])
 const mcpTools = ref([])
 const avatarLoading = ref(false)
+const searchText = ref('')
 
 const form = ref({
   id: null,
@@ -40,6 +41,15 @@ const rules = {
 }
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
+
+const filteredAgents = computed(() => {
+  if (!searchText.value) return agents.value
+  const keyword = searchText.value.toLowerCase()
+  return agents.value.filter(a => 
+    a.name?.toLowerCase().includes(keyword) ||
+    a.description?.toLowerCase().includes(keyword)
+  )
+})
 
 const handleAvatarUpload = async (file) => {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -162,10 +172,14 @@ const handleSubmit = async () => {
   }
 }
 
-const handleDelete = async (id) => {
+const handleDelete = async (agent) => {
   try {
-    await ElMessageBox.confirm('确定删除该智能体吗？', '提示', { type: 'warning' })
-    const res = await deleteAgent(id)
+    await ElMessageBox.confirm(
+      `确定删除「${agent.name}」吗？此操作不可恢复。`, 
+      '删除确认', 
+      { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' }
+    )
+    const res = await deleteAgent(agent.id)
     if (res.code === 200) {
       ElMessage.success('删除成功')
       loadAgents()
@@ -175,6 +189,15 @@ const handleDelete = async (id) => {
       console.error(error)
     }
   }
+}
+
+const getAvatarColor = (name) => {
+  const colors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#00d4aa', '#9b59b6', '#3498db']
+  let hash = 0
+  for (let i = 0; i < (name || '').length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
 }
 
 onMounted(() => {
@@ -187,8 +210,26 @@ onMounted(() => {
 <template>
   <div class="agent-square-view page-container">
     <div class="page-header">
-      <h2 class="page-title">智能体广场</h2>
+      <div class="header-left">
+        <h2 class="page-title">
+          <el-icon class="title-icon"><UserFilled /></el-icon>
+          智能体广场
+        </h2>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ agents.length }}</span>
+            <span class="stat-label">{{ onlyMine ? '我的智能体' : '智能体' }}</span>
+          </div>
+        </div>
+      </div>
       <div class="header-actions">
+        <el-input
+          v-model="searchText"
+          placeholder="搜索智能体..."
+          prefix-icon="Search"
+          clearable
+          class="search-input"
+        />
         <el-radio-group v-model="onlyMine" @change="loadAgents" size="small">
           <el-radio-button :value="false">全部</el-radio-button>
           <el-radio-button :value="true">我的</el-radio-button>
@@ -200,39 +241,67 @@ onMounted(() => {
       </div>
     </div>
     
-    <el-row :gutter="16" v-loading="loading">
-      <el-col v-for="agent in agents" :key="agent.id" :span="6">
-        <div class="agent-card card">
-          <div class="agent-avatar">
-            <el-avatar :size="64" :src="agent.avatar">
-              {{ agent.name?.charAt(0) }}
-            </el-avatar>
+    <div class="agent-grid" v-loading="loading">
+      <div v-for="agent in filteredAgents" :key="agent.id" class="agent-card card">
+        <div class="card-header">
+          <div class="agent-avatar" :style="{ background: getAvatarColor(agent.name) }">
+            <img v-if="agent.avatar" :src="agent.avatar" alt="" />
+            <span v-else>{{ (agent.name || '智')[0] }}</span>
           </div>
-          <h3 class="agent-name">{{ agent.name }}</h3>
+          <div class="agent-info">
+            <div class="agent-name">{{ agent.name }}</div>
+            <div class="agent-meta">
+              <el-tag :type="agent.isPublic === 1 ? 'success' : 'info'" size="small">
+                {{ agent.isPublic === 1 ? '公开' : '私有' }}
+              </el-tag>
+              <span v-if="!onlyMine && agent.username" class="creator">
+                {{ agent.username }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
           <p class="agent-desc">{{ agent.description || '暂无描述' }}</p>
-          <div v-if="agent.username" class="agent-owner">
-            创建者: {{ agent.username }}
-          </div>
           <div class="agent-tags">
-            <el-tag v-if="agent.knowledgeBaseId" type="success" size="small">知识库</el-tag>
-            <el-tag v-if="agent.toolIds?.length" type="warning" size="small">MCP工具</el-tag>
+            <el-tag v-if="agent.knowledgeBaseId" type="success" size="small" effect="light">
+              <el-icon><Collection /></el-icon>
+              知识库
+            </el-tag>
+            <el-tag v-if="agent.toolIds?.length" type="warning" size="small" effect="light">
+              <el-icon><Tools /></el-icon>
+              MCP工具
+            </el-tag>
           </div>
-          <div class="agent-actions">
+        </div>
+        
+        <div class="card-footer">
+          <div class="footer-time">
+            <el-icon><Clock /></el-icon>
+            {{ agent.createTime }}
+          </div>
+          <div class="footer-actions">
             <el-button type="primary" size="small" @click="handleUse(agent)">
               使用
             </el-button>
-            <el-button v-if="agent.userId === currentUserId" text type="primary" size="small" @click="openEditDialog(agent.id)">
-              编辑
-            </el-button>
-            <el-button v-if="agent.userId === currentUserId" text type="danger" size="small" @click="handleDelete(agent.id)">
-              删除
-            </el-button>
+            <template v-if="agent.userId === currentUserId">
+              <el-button text type="primary" size="small" @click="openEditDialog(agent.id)">
+                <el-icon><Edit /></el-icon>
+              </el-button>
+              <el-button text type="danger" size="small" @click="handleDelete(agent)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
           </div>
         </div>
-      </el-col>
-    </el-row>
+      </div>
+    </div>
     
-    <el-empty v-if="!loading && agents.length === 0" description="暂无智能体" />
+    <el-empty v-if="!loading && filteredAgents.length === 0" description="暂无智能体">
+      <template #image>
+        <el-icon :size="60" color="#c0c4cc"><UserFilled /></el-icon>
+      </template>
+    </el-empty>
     
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑智能体' : '新建智能体'" width="600px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
@@ -310,12 +379,53 @@ onMounted(() => {
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .page-title {
-  user-select: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 22px;
+}
+
+.title-icon {
+  color: var(--color-primary);
+  font-size: 24px;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-left: 32px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .header-actions {
@@ -324,48 +434,136 @@ onMounted(() => {
   align-items: center;
 }
 
+.search-input {
+  width: 200px;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-md);
+}
+
 .agent-card {
-  padding: var(--spacing-lg);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-md);
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+.agent-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .agent-avatar {
-  margin-bottom: var(--spacing-md);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.agent-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.agent-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .agent-name {
-  font-size: var(--font-size-lg);
-  font-weight: 500;
-  margin-bottom: var(--spacing-sm);
-  user-select: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.creator {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .agent-desc {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   min-height: 40px;
-}
-
-.agent-owner {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  margin-bottom: var(--spacing-sm);
-  user-select: none;
 }
 
 .agent-tags {
   display: flex;
-  justify-content: center;
   gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
-.agent-actions {
+.agent-tags .el-tag {
   display: flex;
-  justify-content: center;
-  gap: var(--spacing-xs);
+  align-items: center;
+  gap: 2px;
+}
+
+.card-footer {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .avatar-upload {
@@ -377,5 +575,24 @@ onMounted(() => {
 .avatar-preview {
   background: var(--color-primary);
   color: var(--color-white);
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .agent-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -121,6 +121,12 @@ const routes = [
         meta: { requiresAdmin: true }
       },
       {
+        path: 'admin/relay-config',
+        name: 'AdminRelayConfig',
+        component: () => import('@/views/admin/RelayConfigManageView.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
         path: 'admin/usage',
         name: 'AdminUsage',
         component: () => import('@/views/admin/UsageManageView.vue'),
