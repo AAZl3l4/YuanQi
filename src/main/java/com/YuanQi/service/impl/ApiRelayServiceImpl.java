@@ -6,10 +6,8 @@ import com.YuanQi.pojo.ApiKey;
 import com.YuanQi.pojo.ApiRelayConfig;
 import com.YuanQi.pojo.ApiRelayLog;
 import com.YuanQi.pojo.User;
-import com.YuanQi.service.ApiKeyService;
-import com.YuanQi.service.ApiRelayConfigService;
-import com.YuanQi.service.ApiRelayService;
-import com.YuanQi.service.UserService;
+import com.YuanQi.pojo.dto.RelayChatDTO;
+import com.YuanQi.service.*;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,12 +21,14 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.content.Media;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -58,10 +58,15 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             """;
 
     /**
-     * 调用AI并返回结果
+     * 调用AI并返回结果（支持上下文）
      */
     @Override
-    public String call(String apiKey, String message, String imageUrl) {
+    public String call(String apiKey, RelayChatDTO chatDTO) {
+        String message = chatDTO.getMessage();
+        String imageUrl = chatDTO.getImageUrl();
+        String sender = chatDTO.getSender();
+        Integer contextRounds = chatDTO.getContextRounds();
+
         // 校验：消息内容和图片至少填一项
         if ((message == null || message.isEmpty()) && (imageUrl == null || imageUrl.isEmpty())) {
             throw new BusinessException("消息内容和图片不能同时为空");
@@ -87,8 +92,13 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
                 ? user.getChatVisionModel() 
                 : user.getChatModel();
 
-        // 构建消息
-        List<Message> messages = buildMessages(config.getPersonaPrompt(), message, imageUrl);
+        List<ApiRelayLog> historyLogs = null;
+        if (contextRounds != null && contextRounds > 0) {
+            historyLogs = getHistoryLogs(key.getUserId(), config.getId(), key.getId(), sender, contextRounds);
+        }
+
+        // 构建消息（包含历史上下文）
+        List<Message> messages = buildMessagesWithHistory(config.getPersonaPrompt(), message, imageUrl, historyLogs);
 
         // 估算输入Token
         int estimatedInputTokens = TokenUtil.estimateTokens(messages.stream().map(Message::getText).toList());
@@ -107,23 +117,42 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             int estimatedOutputTokens = TokenUtil.estimateTokens(response);
 
             // 保存调用记录
-            saveLog(key, config, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens);
+            saveLog(key, config, sender, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens);
 
             return response;
-
         } catch (Exception e) {
-            log.error("API中转调用失败: {}", e.getMessage());
-            // 保存失败记录
-            saveLog(key, config, message, imageUrl, null, model, estimatedInputTokens, 0);
-            // 使用统一的错误解析
-            throw new BusinessException(MessageServiceImpl.parseApiError(e));
+                log.error("AI调用失败", e);
+                throw new RuntimeException("AI调用失败: " + e.getMessage());
         }
     }
 
     /**
-     * 构建消息列表
+     * 获取历史对话记录
      */
-    private List<Message> buildMessages(String personaPrompt, String message, String imageUrl) {
+    private List<ApiRelayLog> getHistoryLogs(Long userId, Long configId, Long apiKeyId, String sender, Integer contextRounds) {
+        if (contextRounds == null || contextRounds <= 0) {
+            return new ArrayList<>();
+        }
+        
+        LambdaQueryWrapper<ApiRelayLog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ApiRelayLog::getUserId, userId)
+                .eq(ApiRelayLog::getConfigId, configId)
+                .eq(ApiRelayLog::getApiKeyId, apiKeyId);
+        // 如果有sender，则按sender过滤
+        if (StringUtils.isNotBlank(sender)) {
+            queryWrapper.eq(ApiRelayLog::getSender, sender);
+        }
+        
+        queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
+        queryWrapper.last("LIMIT " + contextRounds);
+        
+        return list(queryWrapper);
+    }
+
+    /**
+     * 构建消息（包含历史上下文）
+     */
+    private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs) {
         List<Message> messages = new ArrayList<>();
 
         // 系统提示词
@@ -134,7 +163,24 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             messages.add(new SystemMessage("你的人设/风格：" + personaPrompt));
         }
 
-        // 用户消息
+        // 添加历史对话（按时间正序）
+        if (historyLogs != null && !historyLogs.isEmpty()) {
+            List<ApiRelayLog> orderedLogs = new ArrayList<>(historyLogs);
+            Collections.reverse(orderedLogs);
+            
+            for (ApiRelayLog log : orderedLogs) {
+                        // 添加历史用户消息
+                        if (StringUtils.isNotBlank(log.getInputMessage())) {
+                                messages.add(new UserMessage(log.getInputMessage()));
+                        }
+                        // 添加历史AI回复
+                        if (StringUtils.isNotBlank(log.getOutputMessage())) {
+                                messages.add(new AssistantMessage(log.getOutputMessage()));
+                        }
+                }
+        }
+
+        // 当前用户消息
         if (imageUrl != null && !imageUrl.isEmpty()) {
             try {
                 Media imageMedia = Media.builder()
@@ -159,11 +205,12 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     /**
      * 保存调用记录
      */
-    private void saveLog(ApiKey key, ApiRelayConfig config, String inputMessage, String imageUrl, String outputMessage, String model, int inputTokens, int outputTokens) {
+    private void saveLog(ApiKey key, ApiRelayConfig config, String sender, String inputMessage, String imageUrl, String outputMessage, String model, int inputTokens, int outputTokens) {
         ApiRelayLog log = new ApiRelayLog();
         log.setUserId(key.getUserId());
         log.setApiKeyId(key.getId());
         log.setConfigId(config.getId());
+        log.setSender(sender);
         log.setInputMessage(inputMessage);
         log.setImageUrl(StringUtils.isNotBlank(imageUrl) ? imageUrl : null);
         log.setOutputMessage(outputMessage);
@@ -177,11 +224,17 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
      * 分页查询调用记录
      */
     @Override
-    public IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId) {
+    public IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId, String sender, Long configId) {
         Page<ApiRelayLog> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<ApiRelayLog> queryWrapper = new LambdaQueryWrapper<>();
         if (userId != null) {
             queryWrapper.eq(ApiRelayLog::getUserId, userId);
+        }
+        if (StringUtils.isNotBlank(sender)) {
+            queryWrapper.eq(ApiRelayLog::getSender, sender);
+        }
+        if (configId != null) {
+            queryWrapper.eq(ApiRelayLog::getConfigId, configId);
         }
         queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
 

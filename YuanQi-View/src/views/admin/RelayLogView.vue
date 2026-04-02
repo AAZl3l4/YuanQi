@@ -8,6 +8,9 @@ const searchText = ref('')
 const expandedLogs = ref(new Set())
 const imagePreviewVisible = ref(false)
 const previewImageUrl = ref('')
+const userIdSearch = ref('')
+const senderSearch = ref('')
+const configIdSearch = ref('')
 
 const pagination = ref({
   page: 1,
@@ -30,7 +33,10 @@ const loadLogs = async () => {
   try {
     const res = await getAdminRelayLogs({ 
       page: pagination.value.page, 
-      size: pagination.value.size 
+      size: pagination.value.size,
+      userId: userIdSearch.value || undefined,
+      sender: senderSearch.value || undefined,
+      configId: configIdSearch.value || undefined
     })
     if (res.code === 200) {
       logs.value = res.data.records || []
@@ -63,6 +69,33 @@ const openImagePreview = (url) => {
   imagePreviewVisible.value = true
 }
 
+const searchByUserId = (userId) => {
+  userIdSearch.value = String(userId)
+  pagination.value.page = 1
+  loadLogs()
+}
+
+const searchBySender = (sender) => {
+  senderSearch.value = sender
+  pagination.value.page = 1
+  loadLogs()
+}
+
+const searchByConfigId = (configId) => {
+  configIdSearch.value = String(configId)
+  pagination.value.page = 1
+  loadLogs()
+}
+
+const resetFilters = () => {
+  searchText.value = ''
+  userIdSearch.value = ''
+  senderSearch.value = ''
+  configIdSearch.value = ''
+  pagination.value.page = 1
+  loadLogs()
+}
+
 onMounted(() => {
   loadLogs()
 })
@@ -84,14 +117,41 @@ onMounted(() => {
         </div>
       </div>
       <div class="header-right">
-        <el-input
-          v-model="searchText"
-          placeholder="搜索消息、响应、模型..."
-          prefix-icon="Search"
-          clearable
-          class="search-input"
-        />
-        <el-button @click="loadLogs" :loading="loading">
+        <div class="search-filters">
+          <el-input
+            v-model="userIdSearch"
+            placeholder="用户ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="loadLogs"
+          />
+          <el-input
+            v-model="configIdSearch"
+            placeholder="配置ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="loadLogs"
+          />
+          <el-input
+            v-model="senderSearch"
+            placeholder="发送者"
+            clearable
+            class="filter-input"
+            @keyup.enter="loadLogs"
+          />
+          <el-input
+            v-model="searchText"
+            placeholder="搜索消息、响应、模型..."
+            prefix-icon="Search"
+            clearable
+            class="search-input"
+            @keyup.enter="loadLogs"
+          />
+          <el-button type="primary" @click="loadLogs">
+            <el-icon><Search /></el-icon>
+          </el-button>
+        </div>
+        <el-button @click="resetFilters" :loading="loading">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
@@ -101,14 +161,18 @@ onMounted(() => {
     <div class="logs-grid" v-loading="loading">
       <div v-for="log in filteredLogs" :key="log.id" class="log-card card">
         <div class="log-header">
-          <div class="id-row">
+          <div class="header-row">
             <div class="id-item">
               <span class="id-label">用户</span>
-              <span class="id-value">{{ log.userId || '-' }}</span>
+              <span class="id-value clickable" @click="searchByUserId(log.userId)">{{ log.userId || '-' }}</span>
             </div>
             <div class="id-item">
               <span class="id-label">配置</span>
-              <span class="id-value">{{ log.configId || '-' }}</span>
+              <span class="id-value clickable" @click="searchByConfigId(log.configId)">{{ log.configId || '-' }}</span>
+            </div>
+            <div class="id-item" v-if="log.sender">
+              <span class="id-label">发送者</span>
+              <span class="sender-value clickable" @click="searchBySender(log.sender)">{{ log.sender }}</span>
             </div>
           </div>
           <span class="log-time">{{ log.createTime }}</span>
@@ -261,8 +325,25 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+.header-right {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-filters {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.filter-input {
+  width: 100px;
+}
+
 .search-input {
-  width: 260px;
+  width: 200px;
 }
 
 .logs-grid {
@@ -293,9 +374,11 @@ onMounted(() => {
   border-bottom: 1px solid var(--color-border-light);
 }
 
-.id-row {
+.header-row {
   display: flex;
   gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .id-item {
@@ -313,6 +396,32 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--color-primary);
+}
+
+.id-value.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.id-value.clickable:hover {
+  color: var(--color-success);
+  text-decoration: underline;
+}
+
+.sender-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.sender-value.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sender-value.clickable:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 .log-time {
@@ -506,17 +615,28 @@ onMounted(() => {
     flex-direction: column;
   }
   
-  .search-input {
+  .search-filters {
     width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .filter-input {
+    flex: 1;
+    min-width: 80px;
+  }
+  
+  .search-input {
+    flex: 1;
+    min-width: 150px;
   }
   
   .logs-grid {
     grid-template-columns: 1fr;
   }
   
-  .id-row {
+  .header-row {
     flex-direction: column;
-    gap: var(--spacing-xs);
+    align-items: flex-start;
   }
 }
 </style>

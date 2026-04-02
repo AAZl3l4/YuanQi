@@ -349,6 +349,7 @@ onUnmounted(() => {
             <div class="info-text">
               <strong>联系方式</strong>
               <span>邮箱：AAZl3l4@111.com / QQ：AAZl3l4</span>
+              <a href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=lYK91yPoerwu2pXIWYAxra4o43ScIGAR&authKey=xLvt4Ryo%2BW%2FPSb1GlR4xzsWi5fnk7Cv5iHK%2Fb4qInI0mKLM611HrOrEQvtED7k3l&noverify=0&group_code=883640898" target="_blank">加入QQ交流群</a>
             </div>
           </div>
         </div>

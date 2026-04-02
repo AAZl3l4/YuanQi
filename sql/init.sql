@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS api_relay_log
     user_id        BIGINT   NOT NULL COMMENT '调用用户ID',
     api_key_id     BIGINT   NOT NULL COMMENT 'API Key ID',
     config_id      BIGINT   NOT NULL COMMENT '配置ID',
+    sender         VARCHAR(100)     DEFAULT NULL COMMENT '发送者标识',
     input_message  TEXT     NOT NULL COMMENT '输入消息',
     image_url      VARCHAR(500)      DEFAULT NULL COMMENT '图片URL',
     output_message TEXT              DEFAULT NULL COMMENT '输出消息',
@@ -233,6 +234,7 @@ CREATE TABLE IF NOT EXISTS api_relay_log
     INDEX idx_user_id (user_id),
     INDEX idx_api_key_id (api_key_id),
     INDEX idx_config_id (config_id),
+    INDEX idx_sender (sender),
     INDEX idx_create_time (create_time)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

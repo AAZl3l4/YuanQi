@@ -17,6 +17,8 @@ const activeTab = ref('keys')
 const expandedLogs = ref(new Set())
 const imagePreviewVisible = ref(false)
 const previewImageUrl = ref('')
+const senderSearch = ref('')
+const configIdSearch = ref('')
 
 const logsPagination = ref({
   page: 1,
@@ -76,7 +78,9 @@ const loadLogs = async () => {
   try {
     const res = await getMyRelayLogs({ 
       page: logsPagination.value.page, 
-      size: logsPagination.value.size 
+      size: logsPagination.value.size,
+      sender: senderSearch.value || undefined,
+      configId: configIdSearch.value || undefined
     })
     if (res.code === 200) {
       logs.value = res.data.records || []
@@ -87,6 +91,30 @@ const loadLogs = async () => {
   } finally {
     logsLoading.value = false
   }
+}
+
+const searchBySender = (sender) => {
+  senderSearch.value = sender
+  logsPagination.value.page = 1
+  loadLogs()
+}
+
+const searchByConfigId = (configId) => {
+  configIdSearch.value = String(configId)
+  logsPagination.value.page = 1
+  loadLogs()
+}
+
+const clearSenderSearch = () => {
+  senderSearch.value = ''
+  logsPagination.value.page = 1
+  loadLogs()
+}
+
+const clearConfigIdSearch = () => {
+  configIdSearch.value = ''
+  logsPagination.value.page = 1
+  loadLogs()
 }
 
 const handleLogsPageChange = (page) => {
@@ -284,12 +312,40 @@ onMounted(() => {
       
       <el-tab-pane label="调用记录" name="logs">
         <div class="logs-container" v-loading="logsLoading">
+          <div class="logs-toolbar">
+            <el-input
+              v-model="configIdSearch"
+              placeholder="配置ID"
+              clearable
+              class="filter-input"
+              @clear="clearConfigIdSearch"
+              @keyup.enter="loadLogs"
+            />
+            <el-input
+              v-model="senderSearch"
+              placeholder="发送者"
+              clearable
+              class="filter-input"
+              @clear="clearSenderSearch"
+              @keyup.enter="loadLogs"
+            />
+            <el-button type="primary" @click="loadLogs">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+          </div>
           <div class="logs-grid">
             <div v-for="log in logs" :key="log.id" class="log-card card">
               <div class="log-header">
-                <div class="config-info">
-                  <span class="config-label">配置</span>
-                  <span class="config-value">{{ log.configId || '-' }}</span>
+                <div class="header-row">
+                  <div class="config-info">
+                    <span class="config-label">配置</span>
+                    <span class="config-value clickable" @click="searchByConfigId(log.configId)">{{ log.configId || '-' }}</span>
+                  </div>
+                  <div class="sender-info" v-if="log.sender">
+                    <span class="sender-label">发送者</span>
+                    <span class="sender-value clickable" @click="searchBySender(log.sender)">{{ log.sender }}</span>
+                  </div>
                 </div>
                 <span class="log-time">{{ log.createTime }}</span>
               </div>
@@ -558,6 +614,17 @@ onMounted(() => {
   min-height: 300px;
 }
 
+.logs-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.filter-input {
+  width: 120px;
+}
+
 .logs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -575,21 +642,26 @@ onMounted(() => {
 }
 
 .log-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: var(--spacing-sm);
   padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--color-border-light);
 }
 
-.config-info {
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.config-info,
+.sender-info {
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
 
-.config-label {
+.config-label,
+.sender-label {
   font-size: 12px;
   color: var(--color-text-muted);
 }
@@ -600,9 +672,36 @@ onMounted(() => {
   color: var(--color-primary);
 }
 
+.config-value.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.config-value.clickable:hover {
+  color: var(--color-success);
+  text-decoration: underline;
+}
+
+.sender-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.sender-value.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.sender-value.clickable:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 .log-time {
   font-size: 12px;
   color: var(--color-text-muted);
+  margin-left: auto;
 }
 
 .log-body {

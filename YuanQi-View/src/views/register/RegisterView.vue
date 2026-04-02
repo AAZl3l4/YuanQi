@@ -393,7 +393,7 @@ onUnmounted(() => {
             </div>
             <div class="info-text">
               <strong>获取 API Key</strong>
-              <span>请先登录 <a href="https://bigmodel.cn/" target="_blank">智谱AI开放平台</a> 获取 API Key（含免费额度）</span>
+              <span>请先登录 <a href="https://bigmodel.cn/" target="_blank">智谱AI开放平台</a> 获取 API Key（默认免费模型）</span>
             </div>
           </div>
           
@@ -414,6 +414,7 @@ onUnmounted(() => {
             <div class="info-text">
               <strong>联系方式</strong>
               <span>邮箱：AAZl3l4@111.com / QQ：AAZl3l4</span>
+              <a href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=lYK91yPoerwu2pXIWYAxra4o43ScIGAR&authKey=xLvt4Ryo%2BW%2FPSb1GlR4xzsWi5fnk7Cv5iHK%2Fb4qInI0mKLM611HrOrEQvtED7k3l&noverify=0&group_code=883640898" target="_blank">加入QQ交流群</a>
             </div>
           </div>
         </div>

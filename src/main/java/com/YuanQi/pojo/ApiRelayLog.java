@@ -32,6 +32,12 @@ public class ApiRelayLog extends BaseEntity {
     private Long configId;
 
     /**
+     * 发送者标识（如QQ号，用于区分不同来源的对话上下文）
+     */
+    @TableField("sender")
+    private String sender;
+
+    /**
      * 输入消息
      */
     @TableField("input_message")

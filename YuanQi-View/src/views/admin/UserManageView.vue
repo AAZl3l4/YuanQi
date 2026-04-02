@@ -19,6 +19,12 @@ const userAgents = ref([])
 const userContent = ref([])
 const activeTab = ref('info')
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const emailForm = ref({ userId: null, subject: '', content: '' })
 const editForm = ref({ id: null, username: '', email: '', role: 'user', status: 1 })
 
@@ -29,15 +35,21 @@ const statusText = computed(() => {
 const loadUsers = async () => {
   loading.value = true
   try {
-    const res = await getUserList({ page: 1, size: 100 })
+    const res = await getUserList({ page: pagination.value.page, size: pagination.value.size })
     if (res.code === 200) {
       users.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadUsers()
 }
 
 const loadOnlineUsers = async () => {
@@ -179,7 +191,18 @@ onMounted(() => {
 <template>
   <div class="user-manage-view page-container">
     <div class="page-header">
-      <h2 class="page-title">用户管理</h2>
+      <div class="header-left">
+        <h2 class="page-title">
+          <el-icon class="title-icon"><User /></el-icon>
+          用户管理
+        </h2>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ pagination.total }}</span>
+            <span class="stat-label">总用户</span>
+          </div>
+        </div>
+      </div>
       <el-button type="primary" @click="handleShowOnline">
         <el-icon><User /></el-icon>
         在线用户
@@ -188,7 +211,7 @@ onMounted(() => {
     
     <el-table :data="users" v-loading="loading" class="card">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="username" label="用户名" width="120">
+      <el-table-column prop="username" label="用户名" width="250">
         <template #default="{ row }">
           <div class="user-cell">
             <el-avatar :size="32" :src="row.avatar">
@@ -236,6 +259,16 @@ onMounted(() => {
         </template>
       </el-table-column>
     </el-table>
+    
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
     
     <el-dialog v-model="onlineDialogVisible" title="在线用户" width="600px" class="custom-dialog">
       <el-table :data="onlineUsers" v-if="onlineUsers.length > 0">
@@ -428,12 +461,61 @@ onMounted(() => {
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .page-title {
-  user-select: none;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 22px;
+}
+
+.title-icon {
+  color: var(--color-primary);
+  font-size: 24px;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-left: 32px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 
 .user-cell {
