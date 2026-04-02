@@ -141,6 +141,8 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         // 如果有sender，则按sender过滤
         if (StringUtils.isNotBlank(sender)) {
             queryWrapper.eq(ApiRelayLog::getSender, sender);
+        } else {
+            queryWrapper.isNull(ApiRelayLog::getSender);
         }
         
         queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
