@@ -70,7 +70,29 @@ const openImagePreview = (url) => {
 }
 
 const handleImageError = (e) => {
+  // 显示默认图片，但保存原地址用于点击跳转
+  if (!e.target.dataset.originalSrc) {
+    e.target.dataset.originalSrc = e.target.src
+  }
   e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4='
+}
+
+const handleImageClick = (url, event) => {
+  // 检查图片是否加载失败（通过检查是否有 originalSrc）
+  const img = event.target
+  if (img.dataset.originalSrc) {
+    // 加载失败，使用 noreferrer 打开原地址（解决QQ图片防盗链）
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } else {
+    // 加载成功，打开预览
+    openImagePreview(url)
+  }
 }
 
 const searchByUserId = (userId) => {
@@ -218,13 +240,13 @@ onMounted(() => {
               <el-icon><Picture /></el-icon>
               图片
             </span>
-            <div class="image-wrapper" @click="openImagePreview(log.imageUrl)">
+            <div class="image-wrapper" @click="handleImageClick(log.imageUrl, $event)">
               <img :src="log.imageUrl" alt="调用图片" @error="handleImageError" />
               <div class="image-tip">点击查看大图</div>
             </div>
             <div class="image-notice">
               <el-icon><Warning /></el-icon>
-              <span>QQ图片可能无法正常显示</span>
+              <span>QQ图片可能无法正常显示，点击可尝试在新标签页打开</span>
             </div>
           </div>
         </div>
