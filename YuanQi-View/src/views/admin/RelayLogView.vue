@@ -69,6 +69,10 @@ const openImagePreview = (url) => {
   imagePreviewVisible.value = true
 }
 
+const handleImageError = (e) => {
+  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4='
+}
+
 const searchByUserId = (userId) => {
   userIdSearch.value = String(userId)
   pagination.value.page = 1
@@ -215,7 +219,7 @@ onMounted(() => {
               图片
             </span>
             <div class="image-wrapper" @click="openImagePreview(log.imageUrl)">
-              <img :src="log.imageUrl" alt="调用图片" />
+              <img :src="log.imageUrl" alt="调用图片" @error="handleImageError" />
               <div class="image-tip">点击查看大图</div>
             </div>
             <div class="image-notice">

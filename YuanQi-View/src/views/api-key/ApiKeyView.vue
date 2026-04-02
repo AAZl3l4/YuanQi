@@ -35,7 +35,9 @@ const form = ref({
 const testForm = ref({
   apiKey: '',
   message: '',
-  imageUrl: ''
+  imageUrl: '',
+  sender: '',
+  contextRounds: 0
 })
 const testLoading = ref(false)
 const testResponse = ref('')
@@ -158,7 +160,9 @@ const openTestDialog = (apiKey) => {
   testForm.value = {
     apiKey: apiKey,
     message: '',
-    imageUrl: ''
+    imageUrl: '',
+    sender: '',
+    contextRounds: 0
   }
   testResponse.value = ''
   testDialogVisible.value = true
@@ -207,7 +211,9 @@ const handleTestCall = async () => {
       },
       body: JSON.stringify({
         message: testForm.value.message || undefined,
-        imageUrl: testForm.value.imageUrl || undefined
+        imageUrl: testForm.value.imageUrl || undefined,
+        sender: testForm.value.sender || undefined,
+        contextRounds: testForm.value.contextRounds || undefined
       })
     })
     
@@ -255,6 +261,10 @@ const isLogExpanded = (id) => expandedLogs.value.has(id)
 const openImagePreview = (url) => {
   previewImageUrl.value = url
   imagePreviewVisible.value = true
+}
+
+const handleImageError = (e) => {
+  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlZWUiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD48L3N2Zz4='
 }
 
 onMounted(() => {
@@ -375,7 +385,7 @@ onMounted(() => {
                 <div class="log-image" v-if="log.imageUrl">
                   <span class="label">图片</span>
                   <div class="image-wrapper" @click="openImagePreview(log.imageUrl)">
-                    <img :src="log.imageUrl" alt="调用图片" />
+                    <img :src="log.imageUrl" alt="调用图片" @error="handleImageError" />
                     <div class="image-tip">点击查看大图</div>
                   </div>
                   <div class="image-notice">
@@ -459,6 +469,31 @@ onMounted(() => {
               <el-icon><CopyDocument /></el-icon>
             </el-button>
           </div>
+        </div>
+        
+        <div class="context-section">
+          <div class="context-row">
+            <div class="context-item">
+              <span class="context-label">发送者</span>
+              <el-input
+                v-model="testForm.sender"
+                placeholder="如QQ号"
+                clearable
+                class="context-input"
+              />
+            </div>
+            <div class="context-item">
+              <span class="context-label">上下文轮数</span>
+              <el-input-number
+                v-model="testForm.contextRounds"
+                :min="0"
+                :max="20"
+                controls-position="right"
+                class="context-input"
+              />
+            </div>
+          </div>
+          <div class="context-hint">发送者和上下文轮数用于多轮对话，0表示不启用上下文</div>
         </div>
         
         <div class="input-section">
@@ -894,6 +929,39 @@ onMounted(() => {
   color: var(--color-text-muted);
   display: block;
   margin-bottom: var(--spacing-xs);
+}
+
+.context-section {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.context-row {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.context-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.context-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.context-input {
+  width: 100%;
+}
+
+.context-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
 }
 
 .key-value {

@@ -28,9 +28,9 @@ public class RelayChatDTO {
 
     /**
      * 上下文轮数（1轮=2条消息：用户+AI）
-     * 最多20轮，默认10轮
+     * 最多20轮，默认0轮（不启用上下文）
      */
     @Min(value = 0, message = "上下文轮数不能为负数")
     @Max(value = 20, message = "上下文轮数最多20轮")
-    private Integer contextRounds = 10;
+    private Integer contextRounds = 0;
 }
