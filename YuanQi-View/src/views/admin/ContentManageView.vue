@@ -43,10 +43,6 @@ const openPreview = (url) => {
   previewVisible.value = true
 }
 
-const openInNewTab = (url) => {
-  window.open(url, '_blank')
-}
-
 onMounted(() => {
   loadContents()
 })
@@ -74,9 +70,9 @@ onMounted(() => {
               class="result-thumb"
               @click="openPreview(row.resultUrl)"
             />
-            <div v-else class="video-thumb" @click="openInNewTab(row.resultUrl)">
+            <div v-else class="video-thumb" @click="openPreview(row.resultUrl)">
               <el-icon><VideoPlay /></el-icon>
-              <span>点击查看</span>
+              <span>点击预览</span>
             </div>
           </div>
           <span v-else class="no-result">-</span>
@@ -97,8 +93,9 @@ onMounted(() => {
       </el-table-column>
     </el-table>
     
-    <el-dialog v-model="previewVisible" title="图片预览" width="800px">
-      <img :src="previewUrl" class="preview-image" />
+    <el-dialog v-model="previewVisible" :title="activeType === 'image' ? '图片预览' : '视频预览'" width="800px">
+      <img v-if="activeType === 'image'" :src="previewUrl" class="preview-image" />
+      <video v-else :src="previewUrl" class="preview-video" controls autoplay />
     </el-dialog>
   </div>
 </template>
@@ -168,5 +165,10 @@ onMounted(() => {
   width: 100%;
   max-height: 70vh;
   object-fit: contain;
+}
+
+.preview-video {
+  width: 100%;
+  max-height: 70vh;
 }
 </style>
