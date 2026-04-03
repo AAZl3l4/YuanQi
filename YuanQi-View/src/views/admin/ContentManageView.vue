@@ -6,6 +6,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const contents = ref([])
 const loading = ref(false)
 const activeType = ref('image')
+const previewVisible = ref(false)
+const previewUrl = ref('')
 
 const loadContents = async () => {
   loading.value = true
@@ -36,6 +38,15 @@ const handleDelete = async (id) => {
   }
 }
 
+const openPreview = (url) => {
+  previewUrl.value = url
+  previewVisible.value = true
+}
+
+const openInNewTab = (url) => {
+  window.open(url, '_blank')
+}
+
 onMounted(() => {
   loadContents()
 })
@@ -53,21 +64,42 @@ onMounted(() => {
     
     <el-table :data="contents" v-loading="loading" class="card">
       <el-table-column prop="username" label="用户" width="120" />
-      <el-table-column prop="prompt" label="提示词" min-width="200" />
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="prompt" label="提示词" min-width="180" show-overflow-tooltip />
+      <el-table-column label="生成结果" width="120">
+        <template #default="{ row }">
+          <div v-if="row.resultUrl" class="result-preview">
+            <img 
+              v-if="activeType === 'image'" 
+              :src="row.resultUrl" 
+              class="result-thumb"
+              @click="openPreview(row.resultUrl)"
+            />
+            <div v-else class="video-thumb" @click="openInNewTab(row.resultUrl)">
+              <el-icon><VideoPlay /></el-icon>
+              <span>点击查看</span>
+            </div>
+          </div>
+          <span v-else class="no-result">-</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="status" label="状态" width="80">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
             {{ row.status === 1 ? '成功' : '失败' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建时间" width="180" />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column prop="createTime" label="创建时间" width="170" />
+      <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
           <el-button text type="danger" @click="handleDelete(row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
+    
+    <el-dialog v-model="previewVisible" title="图片预览" width="800px">
+      <img :src="previewUrl" class="preview-image" />
+    </el-dialog>
   </div>
 </template>
 
@@ -81,5 +113,60 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-lg);
+}
+
+.result-preview {
+  display: flex;
+  align-items: center;
+}
+
+.result-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.result-thumb:hover {
+  transform: scale(1.1);
+}
+
+.video-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.video-thumb:hover {
+  background: var(--color-primary-light);
+}
+
+.video-thumb .el-icon {
+  font-size: 20px;
+  color: var(--color-primary);
+}
+
+.video-thumb span {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.no-result {
+  color: var(--color-text-muted);
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
 }
 </style>
