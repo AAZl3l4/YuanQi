@@ -184,6 +184,10 @@ onMounted(() => {
           <div class="config-info">
             <div class="config-name">{{ config.name }}</div>
             <div class="config-meta">
+              <span class="config-id" v-if="onlyMine">
+                <el-icon><Key /></el-icon>
+                ID: {{ config.id }}
+              </span>
               <span class="creator" v-if="!onlyMine && config.username">
                 <el-icon><User /></el-icon>
                 {{ config.username }}
@@ -397,6 +401,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.config-id {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.config-id .el-icon {
+  font-size: 12px;
 }
 
 .creator {
