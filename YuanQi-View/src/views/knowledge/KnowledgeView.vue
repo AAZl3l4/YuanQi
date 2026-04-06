@@ -11,6 +11,28 @@ const formRef = ref()
 const fileLoading = ref(false)
 const isEdit = ref(false)
 
+// 文档类型限制：TXT、MD、HTML、XML、JSON、CSV、PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX、RTF、ODT、ODS、ODP
+const ALLOWED_DOC_TYPES = [
+  'text/plain',
+  'text/markdown',
+  'text/html',
+  'text/xml',
+  'application/xml',
+  'application/json',
+  'text/csv',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/rtf',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation'
+]
+
 const form = ref({
   id: null,
   name: '',
@@ -38,9 +60,14 @@ const loadKnowledge = async () => {
 }
 
 const handleUpload = async (file) => {
+  if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+    ElMessage.warning('文档格式不支持，仅支持 TXT、MD、HTML、XML、JSON、CSV、PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX 等格式')
+    return false
+  }
+  
   fileLoading.value = true
   try {
-    const res = await uploadFile(file.raw)
+    const res = await uploadFile(file)
     if (typeof res === 'string') {
       form.value.documentUrl = res
       ElMessage.success('上传成功')
@@ -167,6 +194,7 @@ onMounted(() => {
           <el-upload
             :show-file-list="false"
             :before-upload="handleUpload"
+            accept=".txt,.md,.html,.xml,.json,.csv,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rtf,.odt,.ods,.odp"
           >
             <el-button :loading="fileLoading">
               <el-icon><Upload /></el-icon>
@@ -176,6 +204,7 @@ onMounted(() => {
               {{ form.documentUrl.split('/').pop() }}
             </span>
           </el-upload>
+          <div class="upload-tip">支持 TXT、MD、HTML、XML、JSON、CSV、PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX 等格式</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -245,5 +274,11 @@ onMounted(() => {
   margin-left: var(--spacing-sm);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+}
+
+.upload-tip {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
 }
 </style>
