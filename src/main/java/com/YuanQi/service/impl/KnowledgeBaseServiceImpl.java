@@ -55,7 +55,7 @@ public class KnowledgeBaseServiceImpl extends ServiceImpl<KnowledgeBaseMapper, K
     private void processDocument(KnowledgeBase knowledgeBase) {
         try {
             // 调用RAG服务处理文档
-            List<String> chunkIds = ragService.processAndStoreDocument(knowledgeBase.getDocumentUrl());
+            List<String> chunkIds = ragService.processAndStoreDocument(knowledgeBase.getDocumentUrl(), knowledgeBase.getId());
 
             // 更新知识库信息
             knowledgeBase.setChunkIds(String.join(",", chunkIds));

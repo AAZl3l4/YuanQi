@@ -353,8 +353,8 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             KnowledgeBase knowledgeBase = knowledgeBaseService.checkOwner(knowledgeBaseId);
             // 确保知识库已加载到向量库
             knowledgeBaseService.ensureLoaded(knowledgeBase);
-            // 构建RAG上下文
-            String ragContext = ragService.buildRagContext(query, ragTopK);
+            // 构建RAG上下文（带知识库隔离）
+            String ragContext = ragService.buildRagContext(query, ragTopK, knowledgeBaseId);
             if (!ragContext.isEmpty()) {
                 context.append(ragContext);
             }
@@ -373,17 +373,17 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     context.append("【用户提供的文档内容】\n").append(fullText).append("\n\n");
                     log.info("小文档直接注入上下文，分块数: {}", documents.size());
                 } else {
-                    // 大文档：临时RAG检索
-                    // 使用已解析的文档存入向量库
-                    List<String> chunkIds = ragService.processAndStoreDocuments(documents, documentUrl);
-                    // 检索相关内容
-                    String ragContext = ragService.buildRagContext(query, ragTopK);
+                    // 大文档：临时RAG检索，生成临时隔离ID
+                    Long tempDocId = System.currentTimeMillis() * 10000 + (long)(Math.random() * 10000);
+                    List<String> chunkIds = ragService.processAndStoreDocuments(documents, documentUrl, tempDocId);
+                    // 检索相关内容（使用临时ID隔离）
+                    String ragContext = ragService.buildRagContext(query, ragTopK, tempDocId);
                     if (!ragContext.isEmpty()) {
                         context.append(ragContext);
                     }
                     // 删除临时向量数据
                     ragService.deleteDocuments(chunkIds);
-                    log.info("大文档临时RAG检索完成，分块数: {}", chunkIds.size());
+                    log.info("大文档临时RAG检索完成，临时ID: {}, 分块数: {}", tempDocId, chunkIds.size());
                 }
             } catch (Exception e) {
                 log.error("文档处理失败: {}", e.getMessage());

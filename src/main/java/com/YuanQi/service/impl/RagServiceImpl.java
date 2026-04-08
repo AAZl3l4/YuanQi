@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,10 +33,10 @@ public class RagServiceImpl implements RagService {
      * @return 生成的文档块ID列表
      */
     @Override
-    public List<String> processAndStoreDocument(String url) {
+    public List<String> processAndStoreDocument(String url, Long knowledgeBaseId) {
         // 使用Tika解析文档，提取文本内容
         List<Document> documents = documentParseService.parseDocument(url);
-        return processAndStoreDocuments(documents, url);
+        return processAndStoreDocuments(documents, url, knowledgeBaseId);
     }
 
     /**
@@ -47,19 +48,21 @@ public class RagServiceImpl implements RagService {
      * @return 生成的文档块ID列表
      */
     @Override
-    public List<String> processAndStoreDocuments(List<Document> documents, String url) {
+    public List<String> processAndStoreDocuments(List<Document> documents, String url, Long knowledgeBaseId) {
         // 为每个分块生成唯一ID，并添加元数据
         List<String> ids = new ArrayList<>();
         for (Document chunk : documents) {
             String id = UUID.randomUUID().toString();
             chunk.getMetadata().put("id", id);
             chunk.getMetadata().put("source", url);
+            // 知识库ID用于隔离（必填）
+            chunk.getMetadata().put("knowledgeBaseId", String.valueOf(knowledgeBaseId));
             ids.add(id);
         }
 
         // 将分块添加到向量存储，自动进行向量化
         vectorStore.add(documents);
-        log.info("文档处理完成，URL: {}, 分块数: {}", url, documents.size());
+        log.info("文档处理完成，URL: {}, 知识库ID: {}, 分块数: {}", url, knowledgeBaseId, documents.size());
         return ids;
     }
 
@@ -75,7 +78,7 @@ public class RagServiceImpl implements RagService {
     }
 
     /**
-     * 相似度检索
+     * 相似度检索（带知识库隔离）
      * 将查询文本向量化，然后在向量库中搜索最相似的文档
      *
      * @param query 查询文本
@@ -83,20 +86,22 @@ public class RagServiceImpl implements RagService {
      * @return 相似文档列表，按相似度降序排列
      */
     @Override
-    public List<Document> similaritySearch(String query, int topK) {
-        // 构建搜索请求，设置查询文本和返回数量
+    public List<Document> similaritySearch(String query, int topK, Long knowledgeBaseId) {
+        // 构建搜索请求，设置查询文本和返回数量，带知识库隔离过滤
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
         SearchRequest request = SearchRequest.builder()
                 .query(query)
                 .topK(topK)
+                .filterExpression(b.eq("knowledgeBaseId", String.valueOf(knowledgeBaseId)).build())
                 .build();
-        // 执行相似度搜索
+        
         List<Document> results = vectorStore.similaritySearch(request);
-        log.info("相似度检索完成，查询: {}, 结果数: {}", query, results.size());
+        log.info("相似度检索完成，查询: {}, 知识库ID: {}, 结果数: {}", query, knowledgeBaseId, results.size());
         return results;
     }
 
     /**
-     * 构建RAG上下文提示
+     * 构建RAG上下文提示（带知识库隔离）
      * 将检索到的相关文档拼接成提示词，供AI回答时参考
      *
      * @param query 用户查询问题
@@ -104,9 +109,9 @@ public class RagServiceImpl implements RagService {
      * @return 构建好的上下文提示字符串
      */
     @Override
-    public String buildRagContext(String query, int topK) {
-        // 1. 检索相关文档
-        List<Document> relevantDocs = similaritySearch(query, topK);
+    public String buildRagContext(String query, int topK, Long knowledgeBaseId) {
+         // 1. 检索相关文档
+        List<Document> relevantDocs = similaritySearch(query, topK, knowledgeBaseId);
         if (relevantDocs.isEmpty()) {
             return "";
         }
