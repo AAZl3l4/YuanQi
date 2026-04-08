@@ -35,6 +35,20 @@ const handleDelete = async (id) => {
   }
 }
 
+const getFileName = (url) => {
+  if (!url) return ''
+  return url.split('/').pop()
+}
+
+const getDownloadUrl = (url) => {
+  if (!url) return ''
+  const parts = url.split('/api/file/')
+  if (parts.length === 2) {
+    return parts[0] + '/api/file/download/' + parts[1]
+  }
+  return url
+}
+
 onMounted(() => {
   loadKnowledge()
 })
@@ -47,6 +61,14 @@ onMounted(() => {
     <el-table :data="knowledgeBases" v-loading="loading" class="card">
       <el-table-column prop="name" label="名称" min-width="150" />
       <el-table-column prop="username" label="创建者" width="120" />
+      <el-table-column label="文档" min-width="180">
+        <template #default="{ row }">
+          <a v-if="row.documentUrl" :href="getDownloadUrl(row.documentUrl)" target="_blank" class="file-link">
+            {{ getFileName(row.documentUrl) }}
+          </a>
+          <span v-else class="no-file">-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="chunkCount" label="分块数" width="100" />
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
@@ -68,5 +90,18 @@ onMounted(() => {
 <style scoped>
 .knowledge-manage-view {
   max-width: 1200px;
+}
+
+.file-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+}
+
+.no-file {
+  color: var(--color-text-muted);
 }
 </style>

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.YuanQi.mapper.ApiKeyMapper">
 
-    <!-- 分页查询API Key（带用户名和配置名） -->
+    <!-- 分页查询API Key（带用户名、配置名、知识库名） -->
     <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.ApiKey">
         SELECT
             ak.id,
@@ -10,6 +10,8 @@
             u.username,
             ak.config_id,
             arc.name as config_name,
+            ak.knowledge_base_id,
+            kb.name as knowledge_base_name,
             ak.key_name,
             ak.api_key,
             ak.expire_time,
@@ -20,6 +22,7 @@
         FROM api_key ak
         LEFT JOIN sys_user u ON ak.user_id = u.id
         LEFT JOIN api_relay_config arc ON ak.config_id = arc.id
+        LEFT JOIN knowledge_base kb ON ak.knowledge_base_id = kb.id
         WHERE ak.deleted = 0
         <if test="userId != null">
             AND ak.user_id = #{userId}

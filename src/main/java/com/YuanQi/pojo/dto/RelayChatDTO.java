@@ -33,4 +33,10 @@ public class RelayChatDTO {
     @Min(value = 0, message = "上下文轮数不能为负数")
     @Max(value = 20, message = "上下文轮数最多20轮")
     private Integer contextRounds = 0;
+
+    /**
+     * 是否使用知识库（仅当API Key绑定了知识库时生效）
+     * 默认false（不使用）
+     */
+    private Boolean useKnowledgeBase = false;
 }

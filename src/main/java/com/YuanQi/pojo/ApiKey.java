@@ -43,6 +43,18 @@ public class ApiKey extends BaseEntity {
     private String configName;
 
     /**
+     * 绑定的知识库ID（可选）
+     */
+    @TableField("knowledge_base_id")
+    private Long knowledgeBaseId;
+
+    /**
+     * 知识库名称（展示用，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String knowledgeBaseName;
+
+    /**
      * Key名称（备注）
      */
     @NotBlank(message = "Key名称不能为空")

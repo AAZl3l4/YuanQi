@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { getMyApiKeys, createApiKey, deleteMyApiKey } from '@/api/apiKey'
 import { getRelayConfigList, getMyRelayLogs } from '@/api/relay'
+import { getMyKnowledgeList } from '@/api/knowledge'
 import { uploadFile } from '@/api/file'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const apiKeys = ref([])
 const configs = ref([])
+const knowledgeBases = ref([])
 const logs = ref([])
 const loading = ref(false)
 const logsLoading = ref(false)
@@ -28,6 +30,7 @@ const logsPagination = ref({
 
 const form = ref({
   configId: null,
+  knowledgeBaseId: null,
   keyName: '',
   expireTime: null
 })
@@ -37,7 +40,8 @@ const testForm = ref({
   message: '',
   imageUrl: '',
   sender: '',
-  contextRounds: 0
+  contextRounds: 0,
+  useKnowledgeBase: false
 })
 const testLoading = ref(false)
 const testResponse = ref('')
@@ -69,6 +73,17 @@ const loadConfigs = async () => {
     const res = await getRelayConfigList({ page: 1, size: 100, onlyMine: false })
     if (res.code === 200) {
       configs.value = res.data.records || []
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const loadKnowledgeBases = async () => {
+  try {
+    const res = await getMyKnowledgeList({ page: 1, size: 100 })
+    if (res.code === 200) {
+      knowledgeBases.value = res.data.records || []
     }
   } catch (error) {
     console.error(error)
@@ -133,7 +148,7 @@ const handleCreate = async () => {
     if (res.code === 200) {
       ElMessage.success('创建成功')
       dialogVisible.value = false
-      form.value = { configId: null, keyName: '', expireTime: null }
+      form.value = { configId: null, knowledgeBaseId: null, keyName: '', expireTime: null }
       loadApiKeys()
     }
   } catch (error) {
@@ -162,7 +177,8 @@ const openTestDialog = (apiKey) => {
     message: '',
     imageUrl: '',
     sender: '',
-    contextRounds: 0
+    contextRounds: 0,
+    useKnowledgeBase: false
   }
   testResponse.value = ''
   testDialogVisible.value = true
@@ -213,7 +229,8 @@ const handleTestCall = async () => {
         message: testForm.value.message || undefined,
         imageUrl: testForm.value.imageUrl || undefined,
         sender: testForm.value.sender || undefined,
-        contextRounds: testForm.value.contextRounds || undefined
+        contextRounds: testForm.value.contextRounds || undefined,
+        useKnowledgeBase: testForm.value.useKnowledgeBase || undefined
       })
     })
     
@@ -309,6 +326,7 @@ const handleImageClick = (url, event) => {
 onMounted(() => {
   loadApiKeys()
   loadConfigs()
+  loadKnowledgeBases()
 })
 </script>
 
@@ -477,6 +495,17 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="知识库">
+          <el-select v-model="form.knowledgeBaseId" placeholder="选择知识库（可选）" style="width: 100%" clearable>
+            <el-option
+              v-for="kb in knowledgeBases"
+              :key="kb.id"
+              :label="kb.name"
+              :value="kb.id"
+            />
+          </el-select>
+          <div class="form-tip">绑定知识库后，调用时会检索知识库内容增强回答</div>
+        </el-form-item>
         <el-form-item label="过期时间">
           <el-date-picker
             v-model="form.expireTime"
@@ -531,8 +560,15 @@ onMounted(() => {
                 class="context-input"
               />
             </div>
+            <div class="context-item">
+              <span class="context-label">使用知识库</span>
+              <el-switch
+                v-model="testForm.useKnowledgeBase"
+                class="context-switch"
+              />
+            </div>
           </div>
-          <div class="context-hint">发送者和上下文轮数用于多轮对话，0表示不启用上下文</div>
+          <div class="context-hint">发送者和上下文轮数用于多轮对话，知识库开关仅当API Key绑定了知识库时生效</div>
         </div>
         
         <div class="input-section">
@@ -997,6 +1033,10 @@ onMounted(() => {
   width: 100%;
 }
 
+.context-switch {
+  margin-top: var(--spacing-xs);
+}
+
 .context-hint {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -1041,6 +1081,12 @@ onMounted(() => {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   margin-left: auto;
+}
+
+.form-tip {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--spacing-xs);
 }
 
 .input-row {

@@ -140,6 +140,20 @@ const handleDelete = async (id) => {
   }
 }
 
+const getFileName = (url) => {
+  if (!url) return ''
+  return url.split('/').pop()
+}
+
+const getDownloadUrl = (url) => {
+  if (!url) return ''
+  const parts = url.split('/api/file/')
+  if (parts.length === 2) {
+    return parts[0] + '/api/file/download/' + parts[1]
+  }
+  return url
+}
+
 onMounted(() => {
   loadKnowledge()
 })
@@ -170,6 +184,12 @@ onMounted(() => {
             </div>
           </div>
           <p class="card-desc">{{ kb.description || '暂无描述' }}</p>
+          <div class="card-file" v-if="kb.documentUrl">
+            <el-icon><Document /></el-icon>
+            <a :href="getDownloadUrl(kb.documentUrl)" target="_blank" class="file-link">
+              {{ getFileName(kb.documentUrl) }}
+            </a>
+          </div>
           <div class="card-meta">
             <span>分块: {{ kb.chunkCount || 0 }}</span>
             <el-tag :type="kb.status === 1 ? 'success' : 'info'" size="small">
@@ -259,6 +279,27 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-md);
   user-select: none;
+}
+
+.card-file {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.card-file .el-icon {
+  color: var(--color-primary);
+}
+
+.file-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.file-link:hover {
+  text-decoration: underline;
 }
 
 .card-meta {

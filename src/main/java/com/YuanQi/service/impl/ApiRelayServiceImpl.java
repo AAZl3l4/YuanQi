@@ -2,10 +2,7 @@ package com.YuanQi.service.impl;
 
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ApiRelayLogMapper;
-import com.YuanQi.pojo.ApiKey;
-import com.YuanQi.pojo.ApiRelayConfig;
-import com.YuanQi.pojo.ApiRelayLog;
-import com.YuanQi.pojo.User;
+import com.YuanQi.pojo.*;
 import com.YuanQi.pojo.dto.RelayChatDTO;
 import com.YuanQi.service.*;
 import com.YuanQi.utils.BusinessException;
@@ -42,6 +39,8 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     private final ApiKeyService apiKeyService;
     private final ApiRelayConfigService apiRelayConfigService;
     private final UserService userService;
+    private final KnowledgeBaseService knowledgeBaseService;
+    private final RagService ragService;
     private final SpringAiConfig springAiConfig;
 
     /**
@@ -97,8 +96,18 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             historyLogs = getHistoryLogs(key.getUserId(), config.getId(), key.getId(), sender, contextRounds);
         }
 
-        // 构建消息（包含历史上下文）
-        List<Message> messages = buildMessagesWithHistory(config.getPersonaPrompt(), message, imageUrl, historyLogs);
+        // 构建知识库上下文（需要开关开启且绑定了知识库）
+        String ragContext = "";
+        if (Boolean.TRUE.equals(chatDTO.getUseKnowledgeBase()) && key.getKnowledgeBaseId() != null) {
+            KnowledgeBase kb = knowledgeBaseService.getById(key.getKnowledgeBaseId());
+            if (kb != null && kb.getStatus() == 1) {
+                knowledgeBaseService.ensureLoaded(kb);
+                ragContext = ragService.buildRagContext(message, 3, key.getKnowledgeBaseId());
+            }
+        }
+
+        // 构建消息（包含历史上下文和知识库上下文）
+        List<Message> messages = buildMessagesWithHistory(config.getPersonaPrompt(), message, imageUrl, historyLogs, ragContext);
 
         // 估算输入Token
         int estimatedInputTokens = TokenUtil.estimateTokens(messages.stream().map(Message::getText).toList());
@@ -152,9 +161,9 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     }
 
     /**
-     * 构建消息（包含历史上下文）
+     * 构建消息（包含历史上下文和知识库上下文）
      */
-    private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs) {
+    private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs, String ragContext) {
         List<Message> messages = new ArrayList<>();
 
         // 系统提示词
@@ -163,6 +172,11 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         // 人设/风格提示词
         if (personaPrompt != null && !personaPrompt.isEmpty()) {
             messages.add(new SystemMessage("你的人设/风格：" + personaPrompt));
+        }
+
+        // 知识库上下文
+        if (ragContext != null && !ragContext.isEmpty()) {
+            messages.add(new SystemMessage(ragContext));
         }
 
         // 添加历史对话（按时间正序）
