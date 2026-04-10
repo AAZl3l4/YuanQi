@@ -7,14 +7,10 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,20 +55,16 @@ public class DocumentParseServiceImpl implements DocumentParseService {
 
     /**
      * 根据URL获取Resource
-     * 如果是本地文件URL，直接使用FileSystemResource
+     * 如果是本平台上传的文件，转换为下载链接
      */
     private Resource getResource(String url) throws Exception {
-        if (url.startsWith("http://localhost:8080/file/")) {
-            // 本地文件，直接读取
-            String filename = url.substring(url.lastIndexOf("/") + 1);
-            Path filePath = Paths.get("src/main/resources/files/").resolve(filename).toAbsolutePath();
-            File file = filePath.toFile();
-            if (file.exists()) {
-                return new FileSystemResource(file);
-            }
-            return new UrlResource(url);
+        // 如果是本平台上传的文件URL（47.105.51.84），转换为下载链接
+        if (url.contains("47.105.51.84") && url.contains("/api/file/") && !url.contains("/api/file/download/")) {
+            String downloadUrl = url.replace("/api/file/", "/api/file/download/");
+            log.info("转换为下载链接: {} -> {}", url, downloadUrl);
+            return new UrlResource(downloadUrl);
         }
-        // 远程URL，使用UrlResource
+        // 其他URL直接使用
         return new UrlResource(url);
     }
 
@@ -80,7 +72,6 @@ public class DocumentParseServiceImpl implements DocumentParseService {
      * 解析文档内容（返回纯文本）
      * 将Document列表合并为单个字符串
      *
-     * @param url 文档URL地址
      * @return 文档的纯文本内容
      */
     @Override

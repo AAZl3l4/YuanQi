@@ -1,21 +1,24 @@
 package com.YuanQi.controller;
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 
 @RestController
 @RequestMapping("/file")
 public class FileController {
-    private static final String UPLOAD_DIR = "src/main/resources/files/";
+    @Value("${file.upload-path}")
+    private String UPLOAD_DIR;
 
     @PostMapping("/upload")
     // 保存文件到服务器
@@ -34,52 +37,99 @@ public class FileController {
         try {
             File directory = new File(UPLOAD_DIR);
             String paths = directory.getCanonicalPath();
-            File dest = new File(paths+'/' + randomFilename);
+            File dest = new File(paths + '/' + randomFilename);
             file.transferTo(dest);
-            return "http://localhost:8080/file/" + randomFilename;
+            return "http://47.105.51.84/api/file/" + randomFilename;
         } catch (IOException e) {
             e.printStackTrace();
             return "文件保存失败: " + e.getMessage();
         }
     }
 
-    // 预览文件
+    /**
+     * 预览文件
+     */
     @GetMapping("/{filename}")
-    public ResponseEntity<Resource> preview(@PathVariable String filename) {
-        File file = new File(UPLOAD_DIR + filename);
+    public void preview(@PathVariable String filename, HttpServletResponse response) throws IOException {
+        File file = new File(UPLOAD_DIR, filename);
         if (!file.exists()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        Resource resource;
-        try {
-            resource = new UrlResource(file.toURI());
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("File not found");
+            return;
         }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                .body(resource);
+        response.setContentType(getContentType(filename));
+        response.setHeader("Content-Disposition", "inline; filename=\"" + encodeFilename(filename) + "\"");
+        response.setContentLengthLong(file.length());
+
+        try (FileInputStream fis = new FileInputStream(file);
+             OutputStream os = response.getOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+        }
     }
 
-    // 下载文件
+    /**
+     * 下载文件
+     */
     @GetMapping("/download/{filename}")
-    public ResponseEntity<Resource> download(@PathVariable String filename) {
-        File file = new File(UPLOAD_DIR + filename);
+    public void download(@PathVariable String filename, HttpServletResponse response) throws IOException {
+        File file = new File(UPLOAD_DIR, filename);
         if (!file.exists()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        Resource resource;
-        try {
-            resource = new UrlResource(file.toURI());
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write("File not found");
+            return;
         }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .body(resource);
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + encodeFilename(filename) + "\"");
+        response.setContentLengthLong(file.length());
+
+        try (FileInputStream fis = new FileInputStream(file);
+             OutputStream os = response.getOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+        }
     }
 
+    /**
+     * 获取文件Content-Type
+     */
+    private String getContentType(String filename) {
+        String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+        return switch (extension) {
+            case "txt" -> "text/plain";
+            case "html", "htm" -> "text/html";
+            case "css" -> "text/css";
+            case "js" -> "application/javascript";
+            case "json" -> "application/json";
+            case "xml" -> "application/xml";
+            case "pdf" -> "application/pdf";
+            case "doc" -> "application/msword";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls" -> "application/vnd.ms-excel";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "svg" -> "image/svg+xml";
+            case "mp4" -> "video/mp4";
+            case "mp3" -> "audio/mpeg";
+            default -> "application/octet-stream";
+        };
+    }
+
+    /**
+     * 编码文件名（支持中文）
+     */
+    private String encodeFilename(String filename) {
+        return URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+    }
 }
 

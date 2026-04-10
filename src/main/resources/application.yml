@@ -28,7 +28,7 @@ spring:
   # AI配置 - GLM API
   ai:
     zhipuai:
-      api-key:
+      api-key: TEST
       base-url: https://open.bigmodel.cn/api/paas
       chat:
         options:
@@ -109,5 +109,8 @@ mybatis-plus:
 # 日志配置
 logging:
   level:
-    root: info
-    com.YuanQi: debug
+    root: error
+    com.YuanQi: info
+
+file:
+  upload-path: /www/wwwroot/YuanQiServer/uploads/
