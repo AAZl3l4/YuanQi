@@ -388,6 +388,7 @@ String removeAtTags(String text) {
     if (isEmpty(text)) return "";
     String r = text;
     r = r.replaceAll("\\[PicUrl=[^\\]]*\\]", "");
+    r = r.replaceAll("\\[atUin=\\d+[^\\]]*\\]", "");
     r = r.replaceAll("\\[AtQQ=\\d+[^\\]]*\\]", "");
     r = r.replaceAll("\\[At[^\\]]*\\]", "");
     r = r.replaceAll("@[^\\s]+", "");
@@ -1598,7 +1599,7 @@ public void onMsg(Object msg) {
             boolean isGroup = isGroupMsg(msg);
             
             if (isGroup) {
-                send(contact, "[AtQQ=" + senderUin + "] " + reply);
+                send(contact, "[atUin=" + senderUin + "] " + reply);
             } else {
                 send(contact, reply);
             }
