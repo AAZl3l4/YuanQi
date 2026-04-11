@@ -50,9 +50,9 @@ public class ApiRelayConfigServiceImpl extends ServiceImpl<ApiRelayConfigMapper,
      * 分页查询配置
      */
     @Override
-    public IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine) {
+    public IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id) {
         Page<ApiRelayConfig> pageParam = new Page<>(page, size);
-        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine);
+        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine, id);
     }
 
     /**

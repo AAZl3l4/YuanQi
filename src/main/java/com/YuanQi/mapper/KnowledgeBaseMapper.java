@@ -16,5 +16,5 @@ public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBase> {
     /**
      * 分页查询知识库（带用户名）
      */
-    IPage<KnowledgeBase> selectPageWithUsername(Page<KnowledgeBase> page, @Param("userId") Long userId);
+    IPage<KnowledgeBase> selectPageWithUsername(Page<KnowledgeBase> page, @Param("userId") Long userId, @Param("id") Long id);
 }

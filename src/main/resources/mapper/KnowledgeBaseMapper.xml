@@ -23,6 +23,9 @@
         <if test="userId != null">
             AND kb.user_id = #{userId}
         </if>
+        <if test="id != null">
+            AND kb.id = #{id}
+        </if>
         ORDER BY kb.create_time DESC
     </select>
 

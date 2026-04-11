@@ -15,6 +15,7 @@ const onlyMine = ref(true)
 const isEdit = ref(false)
 const expandedPrompts = ref(new Set())
 const searchText = ref('')
+const searchId = ref('')
 
 const form = ref({
   id: null,
@@ -30,18 +31,28 @@ const rules = {
 }
 
 const filteredConfigs = computed(() => {
-  if (!searchText.value) return configs.value
-  const keyword = searchText.value.toLowerCase()
-  return configs.value.filter(c => 
-    c.name?.toLowerCase().includes(keyword) ||
-    c.description?.toLowerCase().includes(keyword)
-  )
+  let result = configs.value
+  
+  // 文本筛选（前端过滤）
+  if (searchText.value) {
+    const keyword = searchText.value.toLowerCase()
+    result = result.filter(c => 
+      c.name?.toLowerCase().includes(keyword) ||
+      c.description?.toLowerCase().includes(keyword)
+    )
+  }
+  
+  return result
 })
 
 const loadConfigs = async () => {
   loading.value = true
   try {
-    const res = await getRelayConfigList({ page: 1, size: 100, onlyMine: onlyMine.value })
+    const params = { page: 1, size: 100, onlyMine: onlyMine.value }
+    if (searchId.value) {
+      params.id = searchId.value
+    }
+    const res = await getRelayConfigList(params)
     if (res.code === 200) {
       configs.value = res.data.records || []
     }
@@ -50,6 +61,10 @@ const loadConfigs = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleIdSearch = () => {
+  loadConfigs()
 }
 
 const openCreateDialog = () => {
@@ -157,13 +172,26 @@ onMounted(() => {
         </div>
       </div>
       <div class="header-right">
-        <el-input
-          v-model="searchText"
-          placeholder="搜索配置..."
-          prefix-icon="Search"
-          clearable
-          class="search-input"
-        />
+        <div class="search-filters">
+          <el-input
+            v-model="searchId"
+            placeholder="ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="handleIdSearch"
+            @clear="handleIdSearch"
+          />
+          <el-input
+            v-model="searchText"
+            placeholder="搜索名称、描述..."
+            prefix-icon="Search"
+            clearable
+            class="search-input"
+          />
+          <el-button type="primary" @click="handleIdSearch">
+            <el-icon><Search /></el-icon>
+          </el-button>
+        </div>
         <el-radio-group v-model="onlyMine" @change="loadConfigs" size="small">
           <el-radio-button :value="true">我的</el-radio-button>
           <el-radio-button :value="false">公开</el-radio-button>
@@ -184,10 +212,10 @@ onMounted(() => {
           <div class="config-info">
             <div class="config-name">{{ config.name }}</div>
             <div class="config-meta">
-              <span class="config-id" v-if="onlyMine">
-                <el-icon><Key /></el-icon>
-                ID: {{ config.id }}
-              </span>
+              <div class="id-item" v-if="onlyMine">
+                <span class="id-label">ID</span>
+                <span class="id-value">{{ config.id }}</span>
+              </div>
               <span class="creator" v-if="!onlyMine && config.username">
                 <el-icon><User /></el-icon>
                 {{ config.username }}
@@ -334,12 +362,23 @@ onMounted(() => {
 
 .header-right {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-filters {
+  display: flex;
+  gap: var(--spacing-xs);
   align-items: center;
 }
 
 .search-input {
   width: 200px;
+}
+
+.filter-input {
+  width: 100px;
 }
 
 .config-grid {
@@ -404,16 +443,21 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.config-id {
+.id-item {
   display: flex;
-  align-items: center;
-  gap: 2px;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.id-label {
   font-size: 12px;
   color: var(--color-text-muted);
 }
 
-.config-id .el-icon {
-  font-size: 12px;
+.id-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .creator {

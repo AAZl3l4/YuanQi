@@ -11,6 +11,7 @@ const previewImageUrl = ref('')
 const userIdSearch = ref('')
 const senderSearch = ref('')
 const configIdSearch = ref('')
+const knowledgeBaseIdSearch = ref('')
 
 const pagination = ref({
   page: 1,
@@ -36,7 +37,8 @@ const loadLogs = async () => {
       size: pagination.value.size,
       userId: userIdSearch.value || undefined,
       sender: senderSearch.value || undefined,
-      configId: configIdSearch.value || undefined
+      configId: configIdSearch.value || undefined,
+      knowledgeBaseId: knowledgeBaseIdSearch.value || undefined
     })
     if (res.code === 200) {
       logs.value = res.data.records || []
@@ -118,6 +120,13 @@ const resetFilters = () => {
   userIdSearch.value = ''
   senderSearch.value = ''
   configIdSearch.value = ''
+  knowledgeBaseIdSearch.value = ''
+  pagination.value.page = 1
+  loadLogs()
+}
+
+const searchByKnowledgeBaseId = (knowledgeBaseId) => {
+  knowledgeBaseIdSearch.value = String(knowledgeBaseId)
   pagination.value.page = 1
   loadLogs()
 }
@@ -154,6 +163,13 @@ onMounted(() => {
           <el-input
             v-model="configIdSearch"
             placeholder="配置ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="loadLogs"
+          />
+          <el-input
+            v-model="knowledgeBaseIdSearch"
+            placeholder="知识库ID"
             clearable
             class="filter-input"
             @keyup.enter="loadLogs"
@@ -260,6 +276,10 @@ onMounted(() => {
             <span class="token-item">
               <el-icon><Download /></el-icon>
               {{ log.outputTokens || 0 }}
+            </span>
+            <span class="kb-tag" v-if="log.knowledgeBaseId" @click="searchByKnowledgeBaseId(log.knowledgeBaseId)">
+              <el-icon><Collection /></el-icon>
+              KB:{{ log.knowledgeBaseId }}
             </span>
             <span class="model-tag" v-if="log.modelUsed">{{ log.modelUsed }}</span>
           </div>
@@ -438,6 +458,12 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--color-success);
+}
+
+.kb-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-warning);
 }
 
 .sender-value.clickable {
@@ -620,6 +646,28 @@ onMounted(() => {
   padding: 2px 8px;
   border-radius: 4px;
   margin-left: auto;
+}
+
+.kb-tag {
+  font-size: 11px;
+  color: var(--color-warning);
+  background: var(--color-warning-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.kb-tag:hover {
+  background: var(--color-warning);
+  color: white;
+}
+
+.kb-tag .el-icon {
+  font-size: 11px;
 }
 
 .pagination-wrapper {

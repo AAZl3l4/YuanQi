@@ -10,8 +10,8 @@ const dialogVisible = ref(false)
 const formRef = ref()
 const fileLoading = ref(false)
 const isEdit = ref(false)
+const searchId = ref('')
 
-// 文档类型限制：TXT、MD、HTML、XML、JSON、CSV、PDF、DOC、DOCX、XLS、XLSX、PPT、PPTX、RTF、ODT、ODS、ODP
 const ALLOWED_DOC_TYPES = [
   'text/plain',
   'text/markdown',
@@ -48,7 +48,11 @@ const rules = {
 const loadKnowledge = async () => {
   loading.value = true
   try {
-    const res = await getMyKnowledgeList({ page: 1, size: 100 })
+    const params = { page: 1, size: 100 }
+    if (searchId.value) {
+      params.id = searchId.value
+    }
+    const res = await getMyKnowledgeList(params)
     if (res.code === 200) {
       knowledgeBases.value = res.data.records || []
     }
@@ -57,6 +61,10 @@ const loadKnowledge = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  loadKnowledge()
 }
 
 const handleUpload = async (file) => {
@@ -163,17 +171,38 @@ onMounted(() => {
   <div class="knowledge-view page-container">
     <div class="page-header">
       <h2 class="page-title">知识库管理</h2>
-      <el-button type="primary" @click="openCreateDialog">
-        <el-icon><Plus /></el-icon>
-        新建知识库
-      </el-button>
+      <div class="header-right">
+        <div class="search-filters">
+          <el-input
+            v-model="searchId"
+            placeholder="ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+          />
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+          </el-button>
+        </div>
+        <el-button type="primary" @click="openCreateDialog">
+          <el-icon><Plus /></el-icon>
+          新建知识库
+        </el-button>
+      </div>
     </div>
     
     <el-row :gutter="16" v-loading="loading">
       <el-col v-for="kb in knowledgeBases" :key="kb.id" :span="8">
         <div class="knowledge-card card">
           <div class="card-header">
-            <h3>{{ kb.name }}</h3>
+            <div class="card-title-row">
+              <h3>{{ kb.name }}</h3>
+              <div class="id-item">
+                <span class="id-label">ID</span>
+                <span class="id-value">{{ kb.id }}</span>
+              </div>
+            </div>
             <div class="card-actions">
               <el-button text type="primary" @click="openEditDialog(kb.id)">
                 <el-icon><Edit /></el-icon>
@@ -247,8 +276,48 @@ onMounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
+.header-right {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.search-filters {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.filter-input {
+  width: 100px;
+}
+
 .page-title {
   user-select: none;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.id-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.id-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.id-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .knowledge-card {

@@ -26,6 +26,9 @@
                 AND (arc.user_id = #{userId} OR arc.is_public = 1)
             </if>
         </if>
+        <if test="id != null">
+            AND arc.id = #{id}
+        </if>
         ORDER BY arc.create_time DESC
     </select>
 

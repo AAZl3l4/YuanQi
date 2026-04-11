@@ -24,6 +24,7 @@ public interface ApiRelayService {
      * @param userId 用户ID（可选）
      * @param sender 发送者标识（可选）
      * @param configId 配置ID（可选）
+     * @param knowledgeBaseId 知识库ID（可选）
      */
-    IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId, String sender, Long configId);
+    IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId, String sender, Long configId, Long knowledgeBaseId);
 }

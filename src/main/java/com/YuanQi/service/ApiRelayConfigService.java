@@ -24,7 +24,7 @@ public interface ApiRelayConfigService extends IService<ApiRelayConfig> {
      * @param userId 指定用户ID
      * @param onlyMine 只看自己的
      */
-    IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine);
+    IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id);
 
     /**
      * 删除自己的配置

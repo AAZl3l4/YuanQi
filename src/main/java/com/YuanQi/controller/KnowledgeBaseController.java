@@ -64,9 +64,10 @@ public class KnowledgeBaseController {
     @GetMapping("/my")
     public Result<IPage<KnowledgeBase>> my(
             @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) Long id) {
         Long userId = StpUtil.getLoginIdAsLong();
-        IPage<KnowledgeBase> result = knowledgeBaseService.pageList(page, size, userId);
+        IPage<KnowledgeBase> result = knowledgeBaseService.pageList(page, size, userId, id);
         return Result.success(result);
     }
 
@@ -78,8 +79,9 @@ public class KnowledgeBaseController {
     public Result<IPage<KnowledgeBase>> adminList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) Long userId) {
-        IPage<KnowledgeBase> result = knowledgeBaseService.pageList(page, size, userId);
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long id) {
+        IPage<KnowledgeBase> result = knowledgeBaseService.pageList(page, size, userId, id);
         return Result.success(result);
     }
 
