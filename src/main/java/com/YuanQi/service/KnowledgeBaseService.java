@@ -32,7 +32,7 @@ public interface KnowledgeBaseService extends IService<KnowledgeBase> {
     /**
      * 分页获取知识库列表
      */
-    IPage<KnowledgeBase> pageList(Integer page, Integer size, Long userId);
+    IPage<KnowledgeBase> pageList(Integer page, Integer size, Long userId, Long id);
 
     /**
      * 检查知识库是否属于当前用户 并返回知识库对象

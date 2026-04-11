@@ -38,6 +38,12 @@ public class ApiRelayLog extends BaseEntity {
     private String sender;
 
     /**
+     * 使用的知识库ID
+     */
+    @TableField("knowledge_base_id")
+    private Long knowledgeBaseId;
+
+    /**
      * 输入消息
      */
     @TableField("input_message")

@@ -152,9 +152,9 @@ public class KnowledgeBaseServiceImpl extends ServiceImpl<KnowledgeBaseMapper, K
      * 分页获取知识库列表
      */
     @Override
-    public IPage<KnowledgeBase> pageList(Integer page, Integer size, Long userId) {
+    public IPage<KnowledgeBase> pageList(Integer page, Integer size, Long userId, Long id) {
         Page<KnowledgeBase> pageParam = new Page<>(page, size);
-        return baseMapper.selectPageWithUsername(pageParam, userId);
+        return baseMapper.selectPageWithUsername(pageParam, userId, id);
     }
 
     /**

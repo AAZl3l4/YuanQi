@@ -5,11 +5,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const knowledgeBases = ref([])
 const loading = ref(false)
+const searchId = ref('')
 
 const loadKnowledge = async () => {
   loading.value = true
   try {
-    const res = await getKnowledgeList({ page: 1, size: 100 })
+    const params = { page: 1, size: 100 }
+    if (searchId.value) {
+      params.id = searchId.value
+    }
+    const res = await getKnowledgeList(params)
     if (res.code === 200) {
       knowledgeBases.value = res.data.records || []
     }
@@ -18,6 +23,10 @@ const loadKnowledge = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearch = () => {
+  loadKnowledge()
 }
 
 const handleDelete = async (id) => {
@@ -56,9 +65,34 @@ onMounted(() => {
 
 <template>
   <div class="knowledge-manage-view page-container">
-    <h2 class="page-title">知识库管理</h2>
+    <div class="page-header">
+      <h2 class="page-title">知识库管理</h2>
+      <div class="header-right">
+        <div class="search-filters">
+          <el-input
+            v-model="searchId"
+            placeholder="ID"
+            clearable
+            class="filter-input"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+          />
+          <el-button type="primary" @click="handleSearch">
+            <el-icon><Search /></el-icon>
+          </el-button>
+        </div>
+      </div>
+    </div>
     
     <el-table :data="knowledgeBases" v-loading="loading" class="card">
+      <el-table-column label="ID" width="100">
+        <template #default="{ row }">
+          <div class="id-item">
+            <span class="id-label">ID</span>
+            <span class="id-value">{{ row.id }}</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="name" label="名称" min-width="150" />
       <el-table-column prop="username" label="创建者" width="120" />
       <el-table-column label="文档" min-width="180">
@@ -90,6 +124,46 @@ onMounted(() => {
 <style scoped>
 .knowledge-manage-view {
   max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.header-right {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.search-filters {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+.filter-input {
+  width: 100px;
+}
+
+.id-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.id-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.id-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .file-link {

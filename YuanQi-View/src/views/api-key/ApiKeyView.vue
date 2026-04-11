@@ -21,6 +21,7 @@ const imagePreviewVisible = ref(false)
 const previewImageUrl = ref('')
 const senderSearch = ref('')
 const configIdSearch = ref('')
+const knowledgeBaseIdSearch = ref('')
 
 const logsPagination = ref({
   page: 1,
@@ -97,7 +98,8 @@ const loadLogs = async () => {
       page: logsPagination.value.page, 
       size: logsPagination.value.size,
       sender: senderSearch.value || undefined,
-      configId: configIdSearch.value || undefined
+      configId: configIdSearch.value || undefined,
+      knowledgeBaseId: knowledgeBaseIdSearch.value || undefined
     })
     if (res.code === 200) {
       logs.value = res.data.records || []
@@ -122,6 +124,12 @@ const searchByConfigId = (configId) => {
   loadLogs()
 }
 
+const searchByKnowledgeBaseId = (knowledgeBaseId) => {
+  knowledgeBaseIdSearch.value = String(knowledgeBaseId)
+  logsPagination.value.page = 1
+  loadLogs()
+}
+
 const clearSenderSearch = () => {
   senderSearch.value = ''
   logsPagination.value.page = 1
@@ -130,6 +138,12 @@ const clearSenderSearch = () => {
 
 const clearConfigIdSearch = () => {
   configIdSearch.value = ''
+  logsPagination.value.page = 1
+  loadLogs()
+}
+
+const clearKnowledgeBaseIdSearch = () => {
+  knowledgeBaseIdSearch.value = ''
   logsPagination.value.page = 1
   loadLogs()
 }
@@ -380,26 +394,35 @@ onMounted(() => {
       <el-tab-pane label="调用记录" name="logs">
         <div class="logs-container" v-loading="logsLoading">
           <div class="logs-toolbar">
-            <el-input
-              v-model="configIdSearch"
-              placeholder="配置ID"
-              clearable
-              class="filter-input"
-              @clear="clearConfigIdSearch"
-              @keyup.enter="loadLogs"
-            />
-            <el-input
-              v-model="senderSearch"
-              placeholder="发送者"
-              clearable
-              class="filter-input"
-              @clear="clearSenderSearch"
-              @keyup.enter="loadLogs"
-            />
-            <el-button type="primary" @click="loadLogs">
-              <el-icon><Search /></el-icon>
-              搜索
-            </el-button>
+            <div class="search-filters">
+              <el-input
+                v-model="configIdSearch"
+                placeholder="配置ID"
+                clearable
+                class="filter-input"
+                @clear="clearConfigIdSearch"
+                @keyup.enter="loadLogs"
+              />
+              <el-input
+                v-model="knowledgeBaseIdSearch"
+                placeholder="知识库ID"
+                clearable
+                class="filter-input"
+                @clear="clearKnowledgeBaseIdSearch"
+                @keyup.enter="loadLogs"
+              />
+              <el-input
+                v-model="senderSearch"
+                placeholder="发送者"
+                clearable
+                class="filter-input"
+                @clear="clearSenderSearch"
+                @keyup.enter="loadLogs"
+              />
+              <el-button type="primary" @click="loadLogs">
+                <el-icon><Search /></el-icon>
+              </el-button>
+            </div>
           </div>
           <div class="logs-grid">
             <div v-for="log in logs" :key="log.id" class="log-card card">
@@ -460,6 +483,10 @@ onMounted(() => {
                   <span class="token-item">
                     <el-icon><Download /></el-icon>
                     {{ log.outputTokens || 0 }}
+                  </span>
+                  <span class="kb-tag" v-if="log.knowledgeBaseId" @click="searchByKnowledgeBaseId(log.knowledgeBaseId)">
+                    <el-icon><Collection /></el-icon>
+                    KB:{{ log.knowledgeBaseId }}
                   </span>
                   <span class="model-tag" v-if="log.modelUsed">{{ log.modelUsed }}</span>
                 </div>
@@ -727,12 +754,17 @@ onMounted(() => {
 .logs-toolbar {
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
 
+.search-filters {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
 .filter-input {
-  width: 120px;
+  width: 100px;
 }
 
 .logs-grid {
@@ -971,6 +1003,28 @@ onMounted(() => {
   padding: 2px 8px;
   border-radius: 4px;
   margin-left: auto;
+}
+
+.kb-tag {
+  font-size: 11px;
+  color: var(--color-warning);
+  background: var(--color-warning-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.kb-tag:hover {
+  background: var(--color-warning);
+  color: white;
+}
+
+.kb-tag .el-icon {
+  font-size: 11px;
 }
 
 .preview-image-full {

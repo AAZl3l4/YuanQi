@@ -65,9 +65,10 @@ public class ApiRelayConfigController {
     public Result<IPage<ApiRelayConfig>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) Boolean onlyMine) {
+            @RequestParam(required = false) Boolean onlyMine,
+            @RequestParam(required = false) Long id) {
         Long userId = StpUtil.getLoginIdAsLong();
-        IPage<ApiRelayConfig> result = apiRelayConfigService.pageList(page, size, userId, onlyMine);
+        IPage<ApiRelayConfig> result = apiRelayConfigService.pageList(page, size, userId, onlyMine, id);
         return Result.success(result);
     }
 
@@ -80,8 +81,9 @@ public class ApiRelayConfigController {
     public Result<IPage<ApiRelayConfig>> adminList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) Long userId) {
-        IPage<ApiRelayConfig> result = apiRelayConfigService.pageList(page, size, userId, true);
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long id) {
+        IPage<ApiRelayConfig> result = apiRelayConfigService.pageList(page, size, userId, true, id);
         return Result.success(result);
     }
 

@@ -19,5 +19,6 @@ public interface ApiRelayConfigMapper extends BaseMapper<ApiRelayConfig> {
     IPage<ApiRelayConfig> selectPageWithUsername(
             Page<ApiRelayConfig> page,
             @Param("userId") Long userId,
-            @Param("onlyMine") Boolean onlyMine);
+            @Param("onlyMine") Boolean onlyMine,
+            @Param("id") Long id);
 }
