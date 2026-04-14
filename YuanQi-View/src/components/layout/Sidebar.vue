@@ -130,97 +130,99 @@ const toggleAdminMenu = () => {
       </el-button>
     </div>
 
-    <div v-if="!collapsed" class="session-list">
-      <div class="session-header">
-        <span>最近会话</span>
-        <router-link to="/history" class="more-link">
-          更多 <el-icon><ArrowRight /></el-icon>
-        </router-link>
-      </div>
-      <div class="sessions">
-        <div
-          v-for="session in sessionStore.sessions.slice(0, 10)"
-          :key="session.sessionId"
-          class="session-item"
-          :class="{ active: route.params.sessionId === session.sessionId, 'is-agent': session.agentId }"
-          @click="handleSelectSession(session)"
-        >
-          <el-icon class="session-icon">
-            <UserFilled v-if="session.agentId" />
-            <ChatDotRound v-else />
-          </el-icon>
-          <span class="session-title">{{ session.title || '新对话' }}</span>
-          <el-tag v-if="session.agentId" size="small" type="primary" class="agent-tag">智能体</el-tag>
-          <div class="session-actions">
-            <el-button
-              text
-              size="small"
-              class="action-btn"
-              @click="handleRenameSession(session, $event)"
-            >
-              <el-icon><Edit /></el-icon>
-            </el-button>
-            <el-button
-              text
-              size="small"
-              class="action-btn delete"
-              @click="handleDeleteSession(session, $event)"
-            >
-              <el-icon><Delete /></el-icon>
-            </el-button>
+    <div class="sidebar-scroll">
+      <div v-if="!collapsed" class="session-list">
+        <div class="session-header">
+          <span>最近会话</span>
+          <router-link to="/history" class="more-link">
+            更多 <el-icon><ArrowRight /></el-icon>
+          </router-link>
+        </div>
+        <div class="sessions">
+          <div
+            v-for="session in sessionStore.sessions.slice(0, 5)"
+            :key="session.sessionId"
+            class="session-item"
+            :class="{ active: route.params.sessionId === session.sessionId, 'is-agent': session.agentId }"
+            @click="handleSelectSession(session)"
+          >
+            <el-icon class="session-icon">
+              <UserFilled v-if="session.agentId" />
+              <ChatDotRound v-else />
+            </el-icon>
+            <span class="session-title">{{ session.title || '新对话' }}</span>
+            <el-tag v-if="session.agentId" size="small" type="primary" class="agent-tag">智能体</el-tag>
+            <div class="session-actions">
+              <el-button
+                text
+                size="small"
+                class="action-btn"
+                @click="handleRenameSession(session, $event)"
+              >
+                <el-icon><Edit /></el-icon>
+              </el-button>
+              <el-button
+                text
+                size="small"
+                class="action-btn delete"
+                @click="handleDeleteSession(session, $event)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <nav class="sidebar-nav">
-      <router-link
-        v-for="item in menuItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item"
-        :class="{ active: route.path === item.path }"
-      >
-        <el-icon><component :is="item.icon" /></el-icon>
-        <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
-      </router-link>
-      
-      <template v-if="userStore.isAdmin && adminItems.length > 0">
-        <div class="nav-divider"></div>
-        <div
-          v-if="!collapsed"
-          class="nav-item admin-header"
-          :class="{ active: isAdminRoute }"
-          @click="toggleAdminMenu"
+      <nav class="sidebar-nav">
+        <router-link
+          v-for="item in menuItems"
+          :key="item.path"
+          :to="item.path"
+          class="nav-item"
+          :class="{ active: route.path === item.path }"
         >
-          <el-icon><Setting /></el-icon>
-          <span class="nav-label">管理后台</span>
-          <el-icon class="arrow" :class="{ open: adminMenuOpen }">
-            <ArrowDown />
-          </el-icon>
-        </div>
-        <div
-          v-else
-          class="nav-item admin-header-collapsed"
-          :class="{ active: isAdminRoute }"
-        >
-          <el-icon><Setting /></el-icon>
-        </div>
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span v-if="!collapsed" class="nav-label">{{ item.label }}</span>
+        </router-link>
         
-        <template v-if="!collapsed && (adminMenuOpen || isAdminRoute)">
-          <router-link
-            v-for="item in adminItems"
-            :key="item.path"
-            :to="item.path"
-            class="nav-item admin-item"
-            :class="{ active: route.path === item.path }"
+        <template v-if="userStore.isAdmin && adminItems.length > 0">
+          <div class="nav-divider"></div>
+          <div
+            v-if="!collapsed"
+            class="nav-item admin-header"
+            :class="{ active: isAdminRoute }"
+            @click="toggleAdminMenu"
           >
-            <el-icon><component :is="item.icon" /></el-icon>
-            <span class="nav-label">{{ item.label }}</span>
-          </router-link>
+            <el-icon><Setting /></el-icon>
+            <span class="nav-label">管理后台</span>
+            <el-icon class="arrow" :class="{ open: adminMenuOpen }">
+              <ArrowDown />
+            </el-icon>
+          </div>
+          <div
+            v-else
+            class="nav-item admin-header-collapsed"
+            :class="{ active: isAdminRoute }"
+          >
+            <el-icon><Setting /></el-icon>
+          </div>
+          
+          <template v-if="!collapsed && (adminMenuOpen || isAdminRoute)">
+            <router-link
+              v-for="item in adminItems"
+              :key="item.path"
+              :to="item.path"
+              class="nav-item admin-item"
+              :class="{ active: route.path === item.path }"
+            >
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span class="nav-label">{{ item.label }}</span>
+            </router-link>
+          </template>
         </template>
-      </template>
-    </nav>
+      </nav>
+    </div>
 
     <div class="sidebar-footer">
       <el-button
@@ -257,6 +259,13 @@ const toggleAdminMenu = () => {
 
 .sidebar.collapsed {
   width: 64px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .sidebar-header {
@@ -301,12 +310,8 @@ const toggleAdminMenu = () => {
 }
 
 .session-list {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  flex: 0 0 auto;
   padding: var(--spacing-sm);
-  min-height: 0;
 }
 
 .session-header {
@@ -335,8 +340,8 @@ const toggleAdminMenu = () => {
 }
 
 .sessions {
-  flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .session-item {
@@ -420,8 +425,6 @@ const toggleAdminMenu = () => {
   flex-direction: column;
   gap: var(--spacing-xs);
   border-top: 1px solid var(--color-glass-border);
-  max-height: 50vh;
-  overflow-y: auto;
 }
 
 .nav-item {
