@@ -422,7 +422,7 @@ onMounted(() => {
 
 .header-row {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   align-items: center;
   flex-wrap: wrap;
 }
