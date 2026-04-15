@@ -55,6 +55,15 @@ public class SessionServiceImpl extends ServiceImpl<ChatSessionMapper, ChatSessi
             vo.setAgentAvatar(agent.getAvatar());
             vo.setAgentDescription(agent.getDescription());
             vo.setWelcomeMessage(agent.getWelcomeMessage());
+            // 如果智能体设置了欢迎语，插入第一条消息
+            if (agent.getWelcomeMessage() != null && !agent.getWelcomeMessage().isEmpty()) {
+                ChatMessage welcomeMessage = new ChatMessage();
+                welcomeMessage.setSessionId(session.getSessionId());
+                welcomeMessage.setRole("assistant");
+                welcomeMessage.setContent(agent.getWelcomeMessage());
+                welcomeMessage.setCreateTime(LocalDateTime.now());
+                chatMessageMapper.insert(welcomeMessage);
+            }
         } else {
             session.setTitle("新会话");
         }
