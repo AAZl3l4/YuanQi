@@ -30,149 +30,118 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.regex.Pattern;
 
-String API_URL = "http://47.105.51.84/api/relay/call";
-String TARGET_GROUP = "883640898";
-String TARGET_NAME = "元启Ai交流群";
+String CONFIG_NAME = "config";
+String RULES_KEY = "rules";
+String DEFAULT_API_URL = "http://47.105.51.84/api/relay/call";
+String TARGET_GROUP_NAME = "元启Ai交流群";
+String TARGET_GROUP_UIN = "883640898";
 
-int BG_PANEL = Color.parseColor("#1A1A2E");
-int BG_CARD = Color.parseColor("#252540");
-int BG_INPUT = Color.parseColor("#2D2D4A");
-int TEXT_MAIN = Color.parseColor("#FFFFFF");
-int TEXT_SUB = Color.parseColor("#A0A0B0");
-int TEXT_HINT = Color.parseColor("#606080");
-int ACCENT_BLUE = Color.parseColor("#4A9EFF");
-int ACCENT_GREEN = Color.parseColor("#4AFF9E");
-int ACCENT_RED = Color.parseColor("#FF6B6B");
-int ACCENT_GOLD = Color.parseColor("#FFD93D");
+final int BG_DARK = Color.parseColor("#1A1A1A");
+final int BG_PANEL = Color.parseColor("#2A2A2A");
+final int BG_CARD = Color.parseColor("#3A3A3A");
+final int BG_INPUT = Color.parseColor("#404040");
+final int TEXT_MAIN = Color.parseColor("#FFFFFF");
+final int TEXT_SUB = Color.parseColor("#AAAAAA");
+final int TEXT_HINT = Color.parseColor("#666666");
+final int ACCENT_BLUE = Color.parseColor("#4A9EFF");
+final int ACCENT_GREEN = Color.parseColor("#4AFF9E");
+final int ACCENT_RED = Color.parseColor("#FF6B6B");
+final int ACCENT_GOLD = Color.parseColor("#FFD93D");
+final int DIVIDER = Color.parseColor("#444444");
 
 Map paiLastReplyTime = new HashMap();
 
-String dp(Context ctx, float v) {
-    return String.valueOf((int)(v * ctx.getResources().getDisplayMetrics().density + 0.5f));
-}
+log("main.log", "元启Ai回复脚本开始运行...");
 
-int dpInt(Context ctx, float v) {
-    return (int)(v * ctx.getResources().getDisplayMetrics().density + 0.5f);
-}
-
-boolean isEmpty(String s) {
-    return s == null || s.trim().length() == 0;
-}
-
-String safeStr(Object o) {
-    return o == null ? "" : String.valueOf(o);
-}
-
-String digits(String s) {
-    return s == null ? "" : s.replaceAll("[^0-9]", "");
-}
+addItem("元启Ai自动回复", "showMainMenu");
 
 String getApiKey() {
-    Object v = getData("api_key");
-    return v == null ? "" : String.valueOf(v);
+    return getString(CONFIG_NAME, "api_key", "");
 }
 
 String getErrorReply() {
-    Object v = getData("error_reply");
-    return v == null ? "" : String.valueOf(v);
+    return getString(CONFIG_NAME, "error_reply", "");
 }
 
 int getContextRounds() {
-    Object v = getData("context_rounds");
-    if (v == null) return 0;
-    try {
-        int r = Integer.parseInt(String.valueOf(v));
-        return r < 0 ? 0 : (r > 20 ? 20 : r);
-    } catch (Throwable e) {
-        return 0;
-    }
+    int rounds = getInt(CONFIG_NAME, "context_rounds", 0);
+    if (rounds < 0) return 0;
+    if (rounds > 20) return 20;
+    return rounds;
 }
 
 JSONArray getRules() {
     try {
-        Object v = getData("rules");
-        if (v == null) return new JSONArray();
-        return new JSONArray(String.valueOf(v));
+        String raw = getString(CONFIG_NAME, RULES_KEY, "[]");
+        return new JSONArray(raw);
     } catch (Throwable e) {
         return new JSONArray();
     }
 }
 
-void saveRules(JSONArray arr) {
-    setData("rules", arr == null ? "[]" : arr.toString());
+void saveRules(JSONArray rules) {
+    putString(CONFIG_NAME, RULES_KEY, rules == null ? "[]" : rules.toString());
 }
 
 void addRule(String mode, String trigger) {
     JSONArray rules = getRules();
-    JSONObject r = new JSONObject();
+    JSONObject rule = new JSONObject();
     try {
-        r.put("mode", mode);
-        r.put("trigger", trigger);
-        r.put("enabled", true);
-        rules.put(r);
+        rule.put("mode", mode);
+        rule.put("trigger", trigger);
+        rule.put("enabled", true);
+        rules.put(rule);
         saveRules(rules);
     } catch (Throwable e) {
-        error(e);
+        log("error.log", "添加规则失败: " + e.getMessage());
     }
 }
 
-void deleteRule(int idx) {
+void deleteRule(int index) {
     JSONArray rules = getRules();
-    JSONArray newArr = new JSONArray();
+    JSONArray newRules = new JSONArray();
     for (int i = 0; i < rules.length(); i++) {
-        if (i != idx) newArr.put(rules.optJSONObject(i));
+        if (i != index) {
+            newRules.put(rules.optJSONObject(i));
+        }
     }
-    saveRules(newArr);
+    saveRules(newRules);
 }
 
-boolean isScopeEnabled(String key) {
-    String dataKey = "enabled_" + key;
-    Object v = getData(dataKey);
-    if (v == null) return false;
-    if (v instanceof Boolean) return (Boolean) v;
-    try {
-        return Boolean.parseBoolean(String.valueOf(v));
-    } catch (Throwable e) {
-        return false;
-    }
+boolean isScopeEnabled(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "enabled_" + scopeKey, false);
 }
 
-void setScopeEnabled(String key, boolean en) {
-    setData("enabled_" + key, en);
+void setScopeEnabled(String scopeKey, boolean enabled) {
+    putBoolean(CONFIG_NAME, "enabled_" + scopeKey, enabled);
 }
 
-boolean isAutoQuote(String key) {
-    return getBoolData("auto_quote_" + key, false);
+boolean isAutoQuote(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "auto_quote_" + scopeKey, true);
 }
 
-boolean isIgnoreReply(String key) {
-    return getBoolData("ignore_reply_" + key, true);
+boolean isIgnoreReply(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "ignore_reply_" + scopeKey, true);
 }
 
-boolean isReplySelf(String key) {
-    return getBoolData("reply_self_" + key, false);
+boolean isReplySelf(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "reply_self_" + scopeKey, false);
 }
 
-boolean isPaiReply(String key) {
-    return getBoolData("pai_reply_" + key, false);
+boolean isPaiReply(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "pai_reply_" + scopeKey, false);
 }
 
 boolean useKnowledgeBase() {
-    return getBoolData("use_knowledge_base", false);
+    return getBoolean(CONFIG_NAME, "use_knowledge_base", false);
 }
 
 int getPaiCooldown() {
-    Object v = getData("pai_cooldown");
-    if (v == null) return 10;
-    try {
-        int cd = Integer.parseInt(String.valueOf(v));
-        return cd < 0 ? 0 : cd;
-    } catch (Throwable e) {
-        return 10;
-    }
+    int cd = getInt(CONFIG_NAME, "pai_cooldown", 10);
+    return cd < 0 ? 0 : cd;
 }
 
 boolean canPaiReply(String scopeKey) {
@@ -187,226 +156,70 @@ void updatePaiReplyTime(String scopeKey) {
     paiLastReplyTime.put(scopeKey, System.currentTimeMillis());
 }
 
-String getMsgText(Object msg) {
-    try {
-        StringBuilder sb = new StringBuilder();
-        
-        String content = msg.Content;
-        
-        Object m = msg.msg;
-        if (m != null) {
-            try {
-                List elements = m.elements;
-                if (elements != null && !elements.isEmpty()) {
-                    for (int i = 0; i < elements.size(); i++) {
-                        Object elem = elements.get(i);
-                        if (elem == null) continue;
-                        try {
-                            Object textElem = elem.textElement;
-                            if (textElem != null) {
-                                String text = textElem.content;
-                                if (text != null && text.length() > 0) {
-                                    sb.append(text);
-                                }
-                            }
-                        } catch (Throwable e) {}
-                    }
-                }
-            } catch (Throwable e) {
-                info("[getMsgText] 遍历elements失败: " + e.getMessage());
-            }
-        }
-        
-        String result = sb.toString().trim();
-        if (result.length() == 0 && content != null) {
-            result = content.trim();
-        }
-        return result;
-    } catch (Throwable e) {
-        info("[getMsgText] 异常: " + e.getMessage());
-        return "";
-    }
+boolean isEmpty(String s) {
+    return s == null || s.trim().isEmpty();
 }
 
-Object getField(Object obj, String name) {
-    if (obj == null) return null;
-    Class clazz = obj.getClass();
-    while (clazz != null) {
-        try {
-            java.lang.reflect.Field f = clazz.getDeclaredField(name);
-            f.setAccessible(true);
-            return f.get(obj);
-        } catch (Throwable ignore) {}
-        clazz = clazz.getSuperclass();
-    }
-    return null;
+String digitsOnly(String s) {
+    if (s == null) return "";
+    return s.replaceAll("[^0-9]", "");
 }
 
-String getImgUrl(Object msg) {
-    try {
-        Object picUrlList = getField(msg, "PicUrlList");
-        if (picUrlList instanceof ArrayList) {
-            ArrayList list = (ArrayList) picUrlList;
-            if (list.size() > 0) {
-                return list.get(0).toString();
-            }
-        }
-    } catch (Throwable e) {}
-    return null;
+int dp(float value) {
+    return (int) (value * context.getResources().getDisplayMetrics().density + 0.5f);
 }
 
-boolean isAtMe(Object msg) {
-    try {
-        Map atList = msg.AtList;
-        if (atList == null || atList.isEmpty()) return false;
-        if (atList.containsKey(Long.parseLong(myUin))) return true;
-        if (atList.containsKey(myUin)) return true;
-    } catch (Throwable e) {
-        info("[isAtMe] 异常: " + e.getMessage());
-    }
-    return false;
-}
-
-String[] parsePaiPai(Object msg) {
-    try {
-        Object rawMsg = msg.msg;
-        if (rawMsg == null) return null;
-        String rawStr = rawMsg.toString();
-        
-        if (!rawStr.contains("GrayTipElement") && !rawStr.contains("templParam")) {
-            return null;
-        }
-        
-        String senderUin = null;
-        String targetUin = null;
-        
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("uin_str1=(\\d+)");
-        java.util.regex.Matcher matcher = pattern.matcher(rawStr);
-        if (matcher.find()) {
-            senderUin = matcher.group(1);
-        }
-        
-        pattern = java.util.regex.Pattern.compile("uin_str2=(\\d+)");
-        matcher = pattern.matcher(rawStr);
-        if (matcher.find()) {
-            targetUin = matcher.group(1);
-        }
-        
-        if (senderUin != null && targetUin != null) {
-            return new String[]{senderUin, targetUin};
-        }
-    } catch (Throwable e) {}
-    return null;
-}
-
-boolean isGroupMsg(Object msg) {
-    try {
-        return msg.chatType == 2;
-    } catch (Throwable e) {
-        return false;
-    }
-}
-
-String getGroupUin(Object msg) {
-    try {
-        return digits(msg.peerUid);
-    } catch (Throwable e) {
-        return "";
-    }
-}
-
-String getSenderUin(Object msg) {
-    try {
-        return digits(msg.senderUin);
-    } catch (Throwable e) {
-        return "";
-    }
-}
-
-Object getContact(Object msg) {
-    try {
-        return msg.Contact;
-    } catch (Throwable e) {
-        return null;
-    }
-}
-
-long getMsgId(Object msg) {
-    try {
-        Object m = msg.msg;
-        if (m != null) {
-            return Long.parseLong(String.valueOf(m.msgId));
-        }
-    } catch (Throwable e) {}
-    return 0;
-}
-
-int getMsgType(Object msg) {
-    try {
-        return msg.msgType;
-    } catch (Throwable e) {
-        return 0;
-    }
-}
-
-boolean isSendByMe(Object msg) {
-    try {
-        return msg.MySent;
-    } catch (Throwable e) {
-        return false;
-    }
-}
-
-String buildScopeKey(String groupUin, String uin, int chatType) {
+String buildScopeKey(String peerUin, String name, int chatType) {
     if (chatType == 2) {
-        String g = digits(groupUin);
-        return isEmpty(g) ? "" : "group_" + g;
+        String group = digitsOnly(peerUin);
+        return isEmpty(group) ? "" : "group_" + group;
     }
     if (chatType == 1 || chatType == 100) {
-        String p = digits(uin);
-        return isEmpty(p) ? "" : "private_" + p;
+        String peer = digitsOnly(peerUin);
+        return isEmpty(peer) ? "" : "private_" + peer;
     }
     return "";
 }
 
-String buildScopeKeyForMsg(Object msg) {
-    if (isGroupMsg(msg)) {
-        String g = getGroupUin(msg);
-        return isEmpty(g) ? "" : "group_" + g;
+String buildScopeLabel(String peerUin, String name, int chatType) {
+    if (chatType == 2) {
+        return "当前群聊 " + digitsOnly(peerUin);
     }
-    String p = getSenderUin(msg);
-    return isEmpty(p) ? "" : "private_" + p;
-}
-
-String buildScopeLabel(String groupUin, String uin, int chatType) {
-    if (chatType == 2) return "当前群聊 " + digits(groupUin);
-    String p = digits(uin);
-    return isEmpty(p) ? "当前会话" : "当前私聊 " + p;
+    String peer = digitsOnly(peerUin);
+    return isEmpty(peer) ? "当前会话" : "当前私聊 " + peer;
 }
 
 String removeAtTags(String text) {
     if (isEmpty(text)) return "";
-    String r = text;
-    r = r.replaceAll("\\[PicUrl=[^\\]]*\\]", "");
-    r = r.replaceAll("\\[atUin=\\d+[^\\]]*\\]", "");
-    r = r.replaceAll("\\[AtQQ=\\d+[^\\]]*\\]", "");
-    r = r.replaceAll("\\[At[^\\]]*\\]", "");
-    r = r.replaceAll("@[^\\s]+", "");
-    r = r.replaceAll("[\\u2066\\u2067\\u2068\\u2069]", "");
-    r = r.replaceAll("\\s+", " ").trim();
-    return r;
+    String result = text;
+    result = result.replaceAll("\\[pic=[^\\]]*\\]", "");
+    result = result.replaceAll("\\[atUin=\\d+[^\\]]*\\]", "");
+    result = result.replaceAll("@[^\\s]+", "");
+    result = result.replaceAll("[\\u2066\\u2067\\u2068\\u2069]", "");
+    result = result.replaceAll("\\s+", " ");
+    return result.trim();
 }
 
-String callAI(String msg, String imgUrl, String sender) {
+String extractImageUrl(String text) {
+    if (isEmpty(text)) return null;
+    try {
+        java.util.regex.Matcher matcher = Pattern.compile("\\[pic=([^\\]]+)\\]").matcher(text);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+    } catch (Throwable e) {}
+    return null;
+}
+
+String callAI(String message, String imageUrl, String sender) {
     String apiKey = getApiKey();
-    if (isEmpty(API_URL) || isEmpty(apiKey)) {
-        return "";
+    if (isEmpty(DEFAULT_API_URL) || isEmpty(apiKey)) {
+        return null;
     }
 
     HttpURLConnection conn = null;
-    String result = "";
     try {
-        URL url = new URL(API_URL);
+        URL url = new URL(DEFAULT_API_URL);
         conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
@@ -416,9 +229,13 @@ String callAI(String msg, String imgUrl, String sender) {
         conn.setReadTimeout(60000);
 
         JSONObject body = new JSONObject();
-        body.put("message", msg);
-        if (!isEmpty(imgUrl)) body.put("imageUrl", imgUrl);
-        if (!isEmpty(sender)) body.put("sender", sender);
+        body.put("message", message);
+        if (!isEmpty(imageUrl)) {
+            body.put("imageUrl", imageUrl);
+        }
+        if (!isEmpty(sender)) {
+            body.put("sender", sender);
+        }
         body.put("contextRounds", getContextRounds());
         body.put("useKnowledgeBase", useKnowledgeBase());
 
@@ -428,133 +245,135 @@ String callAI(String msg, String imgUrl, String sender) {
 
         int responseCode = conn.getResponseCode();
         if (responseCode != 200) {
-            return "";
+            return null;
         }
 
         InputStream is = conn.getInputStream();
         BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
         reader.close();
 
-        String resp = sb.toString().trim();
-        if (isEmpty(resp)) {
-            return "";
-        }
+        String response = sb.toString().trim();
+        if (isEmpty(response)) return null;
 
         try {
-            JSONObject json = new JSONObject(resp);
+            JSONObject json = new JSONObject(response);
             int code = json.optInt("code", -1);
             if (code != 200) {
-                return "";
+                return null;
             }
-            Object data = json.opt("data");
-            if (data == null) {
-                return "";
+            Object dataObj = json.opt("data");
+            if (dataObj == null) {
+                return null;
             }
-            result = data instanceof String ? (String) data : data.toString();
-        } catch (Throwable e) {
-            result = resp;
-        }
+            if (dataObj instanceof String) {
+                return (String) dataObj;
+            }
+            return dataObj.toString();
+        } catch (Throwable ignore) {}
+
+        return response;
+
     } catch (Throwable e) {
-        info("[callAI] 异常: " + e.getMessage());
-        error(e);
+        log("error.log", "AI调用失败: " + e.getMessage());
+        return null;
     } finally {
-        if (conn != null) try { conn.disconnect(); } catch (Throwable e) {}
+        if (conn != null) {
+            try { conn.disconnect(); } catch (Throwable ignore) {}
+        }
     }
-    
-    return result;
 }
 
-GradientDrawable panelBg(Context ctx) {
+GradientDrawable createPanelBg(Context ctx) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_PANEL);
-    gd.setCornerRadius(dpInt(ctx, 20));
+    gd.setCornerRadius(dp(20));
     return gd;
 }
 
-GradientDrawable cardBg(Context ctx) {
+GradientDrawable createCardBg(Context ctx) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_CARD);
-    gd.setCornerRadius(dpInt(ctx, 12));
+    gd.setCornerRadius(dp(12));
     return gd;
 }
 
-GradientDrawable inputBg(Context ctx) {
+GradientDrawable createInputBg(Context ctx) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_INPUT);
-    gd.setCornerRadius(dpInt(ctx, 8));
+    gd.setCornerRadius(dp(8));
     return gd;
 }
 
-GradientDrawable chipBg(Context ctx, boolean active) {
+GradientDrawable createChipBg(Context ctx, boolean active) {
     GradientDrawable gd = new GradientDrawable();
     if (active) {
         gd.setColor(Color.parseColor("#1A3A2A"));
-        gd.setStroke(dpInt(ctx, 1), ACCENT_GREEN);
+        gd.setStroke(dp(1), ACCENT_GREEN);
     } else {
         gd.setColor(BG_INPUT);
     }
-    gd.setCornerRadius(dpInt(ctx, 99));
+    gd.setCornerRadius(dp(99));
     return gd;
 }
 
-GradientDrawable modeChipBg(Context ctx, String mode) {
+GradientDrawable createSelectableChipBg(Context ctx, boolean selected, String mode) {
+    GradientDrawable gd = new GradientDrawable();
+    if (selected) {
+        int color = getModeColor(mode);
+        gd.setColor(Color.parseColor("#1A2A3A"));
+        gd.setStroke(dp(1), color);
+    } else {
+        gd.setColor(BG_INPUT);
+        gd.setStroke(dp(1), DIVIDER);
+    }
+    gd.setCornerRadius(dp(8));
+    return gd;
+}
+
+GradientDrawable createModeChipBg(Context ctx, String mode) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_INPUT);
-    gd.setCornerRadius(dpInt(ctx, 6));
-    int c = ACCENT_BLUE;
-    if ("regex".equals(mode)) c = ACCENT_GOLD;
-    else if ("at".equals(mode)) c = ACCENT_GREEN;
-    gd.setStroke(dpInt(ctx, 1), c);
+    gd.setCornerRadius(dp(6));
+    gd.setStroke(dp(1), getModeColor(mode));
     return gd;
 }
 
-int modeColor(String mode) {
+int getModeColor(String mode) {
+    if ("keyword".equals(mode)) return ACCENT_BLUE;
     if ("regex".equals(mode)) return ACCENT_GOLD;
     if ("at".equals(mode)) return ACCENT_GREEN;
-    return ACCENT_BLUE;
+    return TEXT_SUB;
 }
 
-String modeLabel(String mode) {
+String getModeLabel(String mode) {
+    if ("keyword".equals(mode)) return "关键词";
     if ("regex".equals(mode)) return "正则";
     if ("at".equals(mode)) return "艾特";
-    return "关键词";
+    return mode;
 }
 
-View sectionTitle(Context ctx, String text) {
+View createSectionTitle(Context ctx, String text) {
     TextView tv = new TextView(ctx);
     tv.setText(text);
     tv.setTextSize(12);
     tv.setTextColor(TEXT_SUB);
-    tv.setPadding(0, dpInt(ctx, 16), 0, dpInt(ctx, 8));
+    tv.setPadding(0, dp(16), 0, dp(8));
     return tv;
 }
 
-boolean getBoolData(String key, boolean defVal) {
-    Object v = getData(key);
-    if (v == null) return defVal;
-    if (v instanceof Boolean) return (Boolean) v;
-    try {
-        return Boolean.parseBoolean(String.valueOf(v));
-    } catch (Throwable e) {
-        return defVal;
-    }
-}
-
-void setBoolData(String key, boolean val) {
-    setData(key, val);
-}
-
-View toggleItem(Context ctx, String label, boolean checked, String key) {
+View createToggleItem(final Context ctx, String label, boolean checked, final String key) {
     LinearLayout item = new LinearLayout(ctx);
     item.setOrientation(LinearLayout.HORIZONTAL);
     item.setGravity(Gravity.CENTER_VERTICAL);
-    item.setBackground(cardBg(ctx));
-    item.setPadding(dpInt(ctx, 16), dpInt(ctx, 14), dpInt(ctx, 16), dpInt(ctx, 14));
+    item.setBackground(createCardBg(ctx));
+    item.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    params.bottomMargin = dpInt(ctx, 8);
+    params.bottomMargin = dp(8);
     item.setLayoutParams(params);
 
     TextView labelTv = new TextView(ctx);
@@ -564,85 +383,34 @@ View toggleItem(Context ctx, String label, boolean checked, String key) {
     labelTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
     item.addView(labelTv);
 
-    TextView toggle = new TextView(ctx);
+    final TextView toggle = new TextView(ctx);
     toggle.setText(checked ? "开" : "关");
     toggle.setTextSize(12);
     toggle.setTextColor(checked ? TEXT_MAIN : TEXT_SUB);
-    toggle.setBackground(chipBg(ctx, checked));
-    toggle.setPadding(dpInt(ctx, 12), dpInt(ctx, 4), dpInt(ctx, 12), dpInt(ctx, 4));
+    toggle.setBackground(createChipBg(ctx, checked));
+    toggle.setPadding(dp(12), dp(4), dp(12), dp(4));
     item.addView(toggle);
 
     item.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
-            boolean currentVal = getBoolData(key, false);
-            boolean newVal = !currentVal;
-            setBoolData(key, newVal);
-            toggle.setText(newVal ? "开" : "关");
-            toggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
-            toggle.setBackground(chipBg(ctx, newVal));
+            boolean newValue = !getBoolean(CONFIG_NAME, key, false);
+            putBoolean(CONFIG_NAME, key, newValue);
+            toggle.setText(newValue ? "开" : "关");
+            toggle.setTextColor(newValue ? TEXT_MAIN : TEXT_SUB);
+            toggle.setBackground(createChipBg(ctx, newValue));
         }
     });
 
     return item;
 }
 
-View toggleItemWithHint(Context ctx, String label, boolean checked, String key, String hint) {
-    LinearLayout item = new LinearLayout(ctx);
-    item.setOrientation(LinearLayout.VERTICAL);
-    item.setBackground(cardBg(ctx));
-    item.setPadding(dpInt(ctx, 16), dpInt(ctx, 14), dpInt(ctx, 16), dpInt(ctx, 14));
-    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    params.bottomMargin = dpInt(ctx, 8);
-    item.setLayoutParams(params);
-
-    LinearLayout row = new LinearLayout(ctx);
-    row.setOrientation(LinearLayout.HORIZONTAL);
-    row.setGravity(Gravity.CENTER_VERTICAL);
-
-    TextView labelTv = new TextView(ctx);
-    labelTv.setText(label);
-    labelTv.setTextSize(14);
-    labelTv.setTextColor(TEXT_MAIN);
-    labelTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-    row.addView(labelTv);
-
-    TextView toggle = new TextView(ctx);
-    toggle.setText(checked ? "开" : "关");
-    toggle.setTextSize(12);
-    toggle.setTextColor(checked ? TEXT_MAIN : TEXT_SUB);
-    toggle.setBackground(chipBg(ctx, checked));
-    toggle.setPadding(dpInt(ctx, 12), dpInt(ctx, 4), dpInt(ctx, 12), dpInt(ctx, 4));
-    row.addView(toggle);
-    item.addView(row);
-
-    TextView hintTv = new TextView(ctx);
-    hintTv.setText(hint);
-    hintTv.setTextSize(10);
-    hintTv.setTextColor(TEXT_HINT);
-    hintTv.setPadding(0, dpInt(ctx, 4), 0, 0);
-    item.addView(hintTv);
-
-    item.setOnClickListener(new View.OnClickListener() {
-        public void onClick(View v) {
-            boolean currentVal = getBoolData(key, false);
-            boolean newVal = !currentVal;
-            setBoolData(key, newVal);
-            toggle.setText(newVal ? "开" : "关");
-            toggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
-            toggle.setBackground(chipBg(ctx, newVal));
-        }
-    });
-
-    return item;
-}
-
-View rulesCard(Context ctx, JSONArray rules, String scopeKey, boolean isGroup, AlertDialog dialog, Activity activity) {
+View createRulesCard(final Context ctx, JSONArray rules, final String scopeKey, final boolean isGroup, final AlertDialog mainDialog, final Activity activity) {
     LinearLayout card = new LinearLayout(ctx);
     card.setOrientation(LinearLayout.VERTICAL);
-    card.setBackground(cardBg(ctx));
-    card.setPadding(dpInt(ctx, 16), dpInt(ctx, 14), dpInt(ctx, 16), dpInt(ctx, 14));
+    card.setBackground(createCardBg(ctx));
+    card.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    params.bottomMargin = dpInt(ctx, 8);
+    params.bottomMargin = dp(8);
     card.setLayoutParams(params);
 
     LinearLayout header = new LinearLayout(ctx);
@@ -660,7 +428,7 @@ View rulesCard(Context ctx, JSONArray rules, String scopeKey, boolean isGroup, A
     addBtn.setText("+ 添加");
     addBtn.setTextSize(12);
     addBtn.setTextColor(ACCENT_BLUE);
-    addBtn.setPadding(dpInt(ctx, 8), dpInt(ctx, 4), dpInt(ctx, 8), dpInt(ctx, 4));
+    addBtn.setPadding(dp(8), dp(4), dp(8), dp(4));
     header.addView(addBtn);
     card.addView(header);
 
@@ -669,57 +437,58 @@ View rulesCard(Context ctx, JSONArray rules, String scopeKey, boolean isGroup, A
             JSONObject rule = rules.optJSONObject(i);
             if (rule == null) continue;
 
-            LinearLayout row = new LinearLayout(ctx);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(0, dpInt(ctx, 8), 0, 0);
+            LinearLayout ruleRow = new LinearLayout(ctx);
+            ruleRow.setOrientation(LinearLayout.HORIZONTAL);
+            ruleRow.setGravity(Gravity.CENTER_VERTICAL);
+            ruleRow.setPadding(0, dp(8), 0, 0);
 
             String mode = rule.optString("mode", "keyword");
             String trigger = rule.optString("trigger", "");
 
             TextView modeChip = new TextView(ctx);
-            modeChip.setText(modeLabel(mode));
+            modeChip.setText(getModeLabel(mode));
             modeChip.setTextSize(10);
-            modeChip.setTextColor(modeColor(mode));
-            modeChip.setBackground(modeChipBg(ctx, mode));
-            modeChip.setPadding(dpInt(ctx, 6), dpInt(ctx, 2), dpInt(ctx, 6), dpInt(ctx, 2));
-            row.addView(modeChip);
+            modeChip.setTextColor(getModeColor(mode));
+            modeChip.setBackground(createModeChipBg(ctx, mode));
+            modeChip.setPadding(dp(6), dp(2), dp(6), dp(2));
+            ruleRow.addView(modeChip);
 
             TextView triggerTv = new TextView(ctx);
             triggerTv.setText(" " + trigger);
             triggerTv.setTextSize(12);
             triggerTv.setTextColor(TEXT_MAIN);
             triggerTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            row.addView(triggerTv);
+            ruleRow.addView(triggerTv);
 
-            int idx = i;
-            String sk = scopeKey;
-            boolean ig = isGroup;
+            final int ruleIndex = i;
+            final String sk = scopeKey;
+            final boolean ig = isGroup;
             TextView delBtn = new TextView(ctx);
             delBtn.setText("删除");
             delBtn.setTextSize(10);
             delBtn.setTextColor(ACCENT_RED);
-            delBtn.setPadding(dpInt(ctx, 8), dpInt(ctx, 2), dpInt(ctx, 8), dpInt(ctx, 2));
+            delBtn.setPadding(dp(8), dp(2), dp(8), dp(2));
             delBtn.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    deleteRule(idx);
-                    Toast("已删除");
-                    if (dialog != null) {
-                        dialog.dismiss();
+                    deleteRule(ruleIndex);
+                    toast("已删除");
+                    if (mainDialog != null) {
+                        mainDialog.dismiss();
                     }
                     if (activity != null) {
-                        showMainMenu(sk.replace("group_", "").replace("private_", ""), "", ig ? 2 : 1);
+                        showMainMenu(ig ? 2 : 1, sk.replace("group_", "").replace("private_", ""), "");
                     }
                 }
             });
-            row.addView(delBtn);
-            card.addView(row);
+            ruleRow.addView(delBtn);
+
+            card.addView(ruleRow);
         }
     }
 
-    String sk = scopeKey;
-    boolean ig = isGroup;
-    AlertDialog md = dialog;
+    final String sk = scopeKey;
+    final boolean ig = isGroup;
+    final AlertDialog md = mainDialog;
     addBtn.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
             showAddRuleDialog((Activity) ctx, sk, ig, md);
@@ -729,79 +498,110 @@ View rulesCard(Context ctx, JSONArray rules, String scopeKey, boolean isGroup, A
     return card;
 }
 
-View scopeManager(Context ctx, String scopeKey, boolean isGroup) {
+View createScopeManager(final Context ctx, final String scopeKey, final boolean isGroup) {
     LinearLayout card = new LinearLayout(ctx);
     card.setOrientation(LinearLayout.VERTICAL);
-    card.setBackground(cardBg(ctx));
-    card.setPadding(dpInt(ctx, 16), dpInt(ctx, 14), dpInt(ctx, 16), dpInt(ctx, 14));
+    card.setBackground(createCardBg(ctx));
+    card.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    params.bottomMargin = dpInt(ctx, 8);
+    params.bottomMargin = dp(8);
     card.setLayoutParams(params);
 
-    TextView label = new TextView(ctx);
-    label.setText(isGroup ? "当前群聊" : "当前私聊");
-    label.setTextSize(12);
-    label.setTextColor(TEXT_SUB);
-    card.addView(label);
+    if (isGroup) {
+        TextView groupLabel = new TextView(ctx);
+        groupLabel.setText("当前群聊");
+        groupLabel.setTextSize(12);
+        groupLabel.setTextColor(TEXT_SUB);
+        card.addView(groupLabel);
 
-    LinearLayout row = new LinearLayout(ctx);
-    row.setOrientation(LinearLayout.HORIZONTAL);
-    row.setGravity(Gravity.CENTER_VERTICAL);
-    row.setPadding(0, dpInt(ctx, 8), 0, 0);
+        LinearLayout groupRow = new LinearLayout(ctx);
+        groupRow.setOrientation(LinearLayout.HORIZONTAL);
+        groupRow.setGravity(Gravity.CENTER_VERTICAL);
+        groupRow.setPadding(0, dp(8), 0, 0);
 
-    String displayText = isGroup 
-        ? "群号: " + scopeKey.replace("group_", "") 
-        : "QQ号: " + scopeKey.replace("private_", "");
-    TextView info = new TextView(ctx);
-    info.setText(displayText);
-    info.setTextSize(14);
-    info.setTextColor(TEXT_MAIN);
-    info.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-    row.addView(info);
+        String groupUin = scopeKey.replace("group_", "");
+        TextView groupInfo = new TextView(ctx);
+        groupInfo.setText("群号: " + groupUin);
+        groupInfo.setTextSize(14);
+        groupInfo.setTextColor(TEXT_MAIN);
+        groupInfo.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        groupRow.addView(groupInfo);
 
-    TextView toggle = new TextView(ctx);
-    boolean enabled = isScopeEnabled(scopeKey);
-    toggle.setText(enabled ? "已开启" : "已关闭");
-    toggle.setTextSize(12);
-    toggle.setTextColor(enabled ? TEXT_MAIN : TEXT_SUB);
-    toggle.setBackground(chipBg(ctx, enabled));
-    toggle.setPadding(dpInt(ctx, 12), dpInt(ctx, 4), dpInt(ctx, 12), dpInt(ctx, 4));
-    row.addView(toggle);
-    card.addView(row);
+        final TextView toggle = new TextView(ctx);
+        boolean enabled = isScopeEnabled(scopeKey);
+        toggle.setText(enabled ? "已开启" : "已关闭");
+        toggle.setTextSize(12);
+        toggle.setTextColor(enabled ? TEXT_MAIN : TEXT_SUB);
+        toggle.setBackground(createChipBg(ctx, enabled));
+        toggle.setPadding(dp(12), dp(4), dp(12), dp(4));
+        groupRow.addView(toggle);
+        card.addView(groupRow);
 
-    String[] keyHolder = {scopeKey};
-    TextView[] toggleHolder = {toggle};
-    
-    row.setOnClickListener(new View.OnClickListener() {
-        public void onClick(View v) {
-            String key = keyHolder[0];
-            TextView tv = toggleHolder[0];
-            boolean en = isScopeEnabled(key);
-            boolean newVal = !en;
-            setScopeEnabled(key, newVal);
-            tv.setText(newVal ? "已开启" : "已关闭");
-            tv.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
-            tv.setBackground(chipBg(ctx, newVal));
-            Toast(newVal ? "已开启" : "已关闭");
-        }
-    });
+        toggle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                boolean enabled = isScopeEnabled(scopeKey);
+                setScopeEnabled(scopeKey, !enabled);
+                toggle.setText(!enabled ? "已开启" : "已关闭");
+                toggle.setTextColor(!enabled ? TEXT_MAIN : TEXT_SUB);
+                toggle.setBackground(createChipBg(ctx, !enabled));
+            }
+        });
+    } else {
+        TextView privateLabel = new TextView(ctx);
+        privateLabel.setText("当前私聊");
+        privateLabel.setTextSize(12);
+        privateLabel.setTextColor(TEXT_SUB);
+        card.addView(privateLabel);
+
+        LinearLayout privateRow = new LinearLayout(ctx);
+        privateRow.setOrientation(LinearLayout.HORIZONTAL);
+        privateRow.setGravity(Gravity.CENTER_VERTICAL);
+        privateRow.setPadding(0, dp(8), 0, 0);
+
+        TextView privateInfo = new TextView(ctx);
+        privateInfo.setText("私聊消息AI回复");
+        privateInfo.setTextSize(14);
+        privateInfo.setTextColor(TEXT_MAIN);
+        privateInfo.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        privateRow.addView(privateInfo);
+
+        final TextView toggle = new TextView(ctx);
+        boolean enabled = isScopeEnabled(scopeKey);
+        toggle.setText(enabled ? "已开启" : "已关闭");
+        toggle.setTextSize(12);
+        toggle.setTextColor(enabled ? TEXT_MAIN : TEXT_SUB);
+        toggle.setBackground(createChipBg(ctx, enabled));
+        toggle.setPadding(dp(12), dp(4), dp(12), dp(4));
+        privateRow.addView(toggle);
+        card.addView(privateRow);
+
+        toggle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                boolean enabled = isScopeEnabled(scopeKey);
+                setScopeEnabled(scopeKey, !enabled);
+                toggle.setText(!enabled ? "已开启" : "已关闭");
+                toggle.setTextColor(!enabled ? TEXT_MAIN : TEXT_SUB);
+                toggle.setBackground(createChipBg(ctx, !enabled));
+            }
+        });
+    }
 
     return card;
 }
 
-void showApiKeyDialog(Activity activity) {
+void showApiKeyDialog(final Activity activity) {
     AlertDialog dialog = new AlertDialog.Builder(activity).create();
     dialog.setCanceledOnTouchOutside(true);
 
     LinearLayout root = new LinearLayout(activity);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setBackgroundColor(Color.TRANSPARENT);
-    root.setPadding(dpInt(activity, 20), dpInt(activity, 50), dpInt(activity, 20), dpInt(activity, 50));
+    root.setPadding(dp(20), dp(50), dp(20), dp(50));
 
     LinearLayout panel = new LinearLayout(activity);
     panel.setOrientation(LinearLayout.VERTICAL);
-    panel.setBackground(panelBg(activity));
-    panel.setPadding(dpInt(activity, 20), dpInt(activity, 24), dpInt(activity, 20), dpInt(activity, 24));
+    panel.setBackground(createPanelBg(activity));
+    panel.setPadding(dp(20), dp(24), dp(20), dp(24));
 
     LinearLayout headerRow = new LinearLayout(activity);
     headerRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -819,7 +619,7 @@ void showApiKeyDialog(Activity activity) {
     closeBtn.setText("✕");
     closeBtn.setTextSize(18);
     closeBtn.setTextColor(TEXT_SUB);
-    closeBtn.setPadding(dpInt(activity, 8), dpInt(activity, 4), dpInt(activity, 8), dpInt(activity, 4));
+    closeBtn.setPadding(dp(8), dp(4), dp(8), dp(4));
     closeBtn.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
             dialog.dismiss();
@@ -832,12 +632,12 @@ void showApiKeyDialog(Activity activity) {
     subLabel.setText("配置元启API密钥与默认回复词");
     subLabel.setTextSize(11);
     subLabel.setTextColor(TEXT_SUB);
-    subLabel.setPadding(0, dpInt(activity, 8), 0, dpInt(activity, 16));
+    subLabel.setPadding(0, dp(8), 0, dp(16));
     panel.addView(subLabel);
 
     ScrollView scroll = new ScrollView(activity);
     scroll.setVerticalScrollBarEnabled(false);
-    LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpInt(activity, 400));
+    LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(400));
     scroll.setLayoutParams(scrollParams);
 
     LinearLayout content = new LinearLayout(activity);
@@ -845,10 +645,10 @@ void showApiKeyDialog(Activity activity) {
 
     LinearLayout apiKeyCard = new LinearLayout(activity);
     apiKeyCard.setOrientation(LinearLayout.VERTICAL);
-    apiKeyCard.setBackground(cardBg(activity));
-    apiKeyCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+    apiKeyCard.setBackground(createCardBg(activity));
+    apiKeyCard.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams cardParams1 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    cardParams1.bottomMargin = dpInt(activity, 12);
+    cardParams1.bottomMargin = dp(12);
     apiKeyCard.setLayoutParams(cardParams1);
 
     TextView apiKeyLabel = new TextView(activity);
@@ -857,27 +657,27 @@ void showApiKeyDialog(Activity activity) {
     apiKeyLabel.setTextColor(TEXT_SUB);
     apiKeyCard.addView(apiKeyLabel);
 
-    EditText apiKeyInput = new EditText(activity);
+    final EditText apiKeyInput = new EditText(activity);
     apiKeyInput.setText(getApiKey());
     apiKeyInput.setTextColor(TEXT_MAIN);
     apiKeyInput.setHint("请输入元启API Key");
     apiKeyInput.setHintTextColor(TEXT_HINT);
-    apiKeyInput.setBackground(inputBg(activity));
-    apiKeyInput.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
+    apiKeyInput.setBackground(createInputBg(activity));
+    apiKeyInput.setPadding(dp(16), dp(12), dp(16), dp(12));
     apiKeyInput.setFocusable(true);
     apiKeyInput.setFocusableInTouchMode(true);
     LinearLayout.LayoutParams apiKeyParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    apiKeyParams.topMargin = dpInt(activity, 8);
+    apiKeyParams.topMargin = dp(8);
     apiKeyInput.setLayoutParams(apiKeyParams);
     apiKeyCard.addView(apiKeyInput);
     content.addView(apiKeyCard);
 
     LinearLayout contextCard = new LinearLayout(activity);
     contextCard.setOrientation(LinearLayout.VERTICAL);
-    contextCard.setBackground(cardBg(activity));
-    contextCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+    contextCard.setBackground(createCardBg(activity));
+    contextCard.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams cardParams2 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    cardParams2.bottomMargin = dpInt(activity, 12);
+    cardParams2.bottomMargin = dp(12);
     contextCard.setLayoutParams(cardParams2);
 
     TextView contextLabel = new TextView(activity);
@@ -890,29 +690,27 @@ void showApiKeyDialog(Activity activity) {
     contextHint.setText("AI对话记忆轮数，范围0-20，0表示无记忆");
     contextHint.setTextSize(10);
     contextHint.setTextColor(TEXT_HINT);
-    contextHint.setPadding(0, dpInt(activity, 4), 0, dpInt(activity, 8));
+    contextHint.setPadding(0, dp(4), 0, dp(8));
     contextCard.addView(contextHint);
 
-    EditText contextInput = new EditText(activity);
+    final EditText contextInput = new EditText(activity);
     contextInput.setText(String.valueOf(getContextRounds()));
     contextInput.setTextColor(TEXT_MAIN);
     contextInput.setHint("0-20");
     contextInput.setHintTextColor(TEXT_HINT);
     contextInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-    contextInput.setBackground(inputBg(activity));
-    contextInput.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
-    contextInput.setFocusable(true);
-    contextInput.setFocusableInTouchMode(true);
+    contextInput.setBackground(createInputBg(activity));
+    contextInput.setPadding(dp(16), dp(12), dp(16), dp(12));
     contextInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     contextCard.addView(contextInput);
     content.addView(contextCard);
 
     LinearLayout knowledgeCard = new LinearLayout(activity);
     knowledgeCard.setOrientation(LinearLayout.VERTICAL);
-    knowledgeCard.setBackground(cardBg(activity));
-    knowledgeCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+    knowledgeCard.setBackground(createCardBg(activity));
+    knowledgeCard.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams cardParams2b = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    cardParams2b.bottomMargin = dpInt(activity, 12);
+    cardParams2b.bottomMargin = dp(12);
     knowledgeCard.setLayoutParams(cardParams2b);
 
     LinearLayout knowledgeRow = new LinearLayout(activity);
@@ -930,8 +728,8 @@ void showApiKeyDialog(Activity activity) {
     knowledgeToggle.setText(useKnowledgeBase() ? "开" : "关");
     knowledgeToggle.setTextSize(12);
     knowledgeToggle.setTextColor(useKnowledgeBase() ? TEXT_MAIN : TEXT_SUB);
-    knowledgeToggle.setBackground(chipBg(activity, useKnowledgeBase()));
-    knowledgeToggle.setPadding(dpInt(activity, 12), dpInt(activity, 4), dpInt(activity, 12), dpInt(activity, 4));
+    knowledgeToggle.setBackground(createChipBg(activity, useKnowledgeBase()));
+    knowledgeToggle.setPadding(dp(12), dp(4), dp(12), dp(4));
     knowledgeRow.addView(knowledgeToggle);
     knowledgeCard.addView(knowledgeRow);
 
@@ -939,26 +737,26 @@ void showApiKeyDialog(Activity activity) {
     knowledgeHint.setText("启用知识库会导致回复变慢");
     knowledgeHint.setTextSize(10);
     knowledgeHint.setTextColor(TEXT_HINT);
-    knowledgeHint.setPadding(0, dpInt(activity, 4), 0, 0);
+    knowledgeHint.setPadding(0, dp(4), 0, 0);
     knowledgeCard.addView(knowledgeHint);
 
     knowledgeCard.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
             boolean newVal = !useKnowledgeBase();
-            setBoolData("use_knowledge_base", newVal);
+            putBoolean(CONFIG_NAME, "use_knowledge_base", newVal);
             knowledgeToggle.setText(newVal ? "开" : "关");
             knowledgeToggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
-            knowledgeToggle.setBackground(chipBg(activity, newVal));
+            knowledgeToggle.setBackground(createChipBg(activity, newVal));
         }
     });
     content.addView(knowledgeCard);
 
     LinearLayout cooldownCard = new LinearLayout(activity);
     cooldownCard.setOrientation(LinearLayout.VERTICAL);
-    cooldownCard.setBackground(cardBg(activity));
-    cooldownCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+    cooldownCard.setBackground(createCardBg(activity));
+    cooldownCard.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams cardParams2c = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    cardParams2c.bottomMargin = dpInt(activity, 12);
+    cardParams2c.bottomMargin = dp(12);
     cooldownCard.setLayoutParams(cardParams2c);
 
     TextView cooldownLabel = new TextView(activity);
@@ -971,29 +769,27 @@ void showApiKeyDialog(Activity activity) {
     cooldownHint.setText("同一作用域内两次拍一拍回复的最小间隔秒数，0表示不限流");
     cooldownHint.setTextSize(10);
     cooldownHint.setTextColor(TEXT_HINT);
-    cooldownHint.setPadding(0, dpInt(activity, 4), 0, dpInt(activity, 8));
+    cooldownHint.setPadding(0, dp(4), 0, dp(8));
     cooldownCard.addView(cooldownHint);
 
-    EditText cooldownInput = new EditText(activity);
+    final EditText cooldownInput = new EditText(activity);
     cooldownInput.setText(String.valueOf(getPaiCooldown()));
     cooldownInput.setTextColor(TEXT_MAIN);
     cooldownInput.setHint("默认10秒");
     cooldownInput.setHintTextColor(TEXT_HINT);
     cooldownInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-    cooldownInput.setBackground(inputBg(activity));
-    cooldownInput.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
-    cooldownInput.setFocusable(true);
-    cooldownInput.setFocusableInTouchMode(true);
+    cooldownInput.setBackground(createInputBg(activity));
+    cooldownInput.setPadding(dp(16), dp(12), dp(16), dp(12));
     cooldownInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     cooldownCard.addView(cooldownInput);
     content.addView(cooldownCard);
 
     LinearLayout errorCard = new LinearLayout(activity);
     errorCard.setOrientation(LinearLayout.VERTICAL);
-    errorCard.setBackground(cardBg(activity));
-    errorCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+    errorCard.setBackground(createCardBg(activity));
+    errorCard.setPadding(dp(16), dp(14), dp(16), dp(14));
     LinearLayout.LayoutParams cardParams3 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    cardParams3.bottomMargin = dpInt(activity, 20);
+    cardParams3.bottomMargin = dp(20);
     errorCard.setLayoutParams(cardParams3);
 
     TextView errorReplyLabel = new TextView(activity);
@@ -1006,18 +802,16 @@ void showApiKeyDialog(Activity activity) {
     errorHint.setText("AI调用失败时发送此内容，留空则不回复");
     errorHint.setTextSize(10);
     errorHint.setTextColor(TEXT_HINT);
-    errorHint.setPadding(0, dpInt(activity, 4), 0, dpInt(activity, 8));
+    errorHint.setPadding(0, dp(4), 0, dp(8));
     errorCard.addView(errorHint);
 
-    EditText errorReplyInput = new EditText(activity);
+    final EditText errorReplyInput = new EditText(activity);
     errorReplyInput.setText(getErrorReply());
     errorReplyInput.setTextColor(TEXT_MAIN);
     errorReplyInput.setHint("例如：AI服务暂时不可用");
     errorReplyInput.setHintTextColor(TEXT_HINT);
-    errorReplyInput.setBackground(inputBg(activity));
-    errorReplyInput.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
-    errorReplyInput.setFocusable(true);
-    errorReplyInput.setFocusableInTouchMode(true);
+    errorReplyInput.setBackground(createInputBg(activity));
+    errorReplyInput.setPadding(dp(16), dp(12), dp(16), dp(12));
     errorReplyInput.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     errorCard.addView(errorReplyInput);
     content.addView(errorCard);
@@ -1033,8 +827,8 @@ void showApiKeyDialog(Activity activity) {
     cancelBtn.setText("取消");
     cancelBtn.setTextSize(13);
     cancelBtn.setTextColor(TEXT_SUB);
-    cancelBtn.setBackground(chipBg(activity, false));
-    cancelBtn.setPadding(dpInt(activity, 16), dpInt(activity, 10), dpInt(activity, 16), dpInt(activity, 10));
+    cancelBtn.setBackground(createChipBg(activity, false));
+    cancelBtn.setPadding(dp(16), dp(10), dp(16), dp(10));
     cancelBtn.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
             dialog.dismiss();
@@ -1046,10 +840,10 @@ void showApiKeyDialog(Activity activity) {
     saveBtn.setText("保存设置");
     saveBtn.setTextSize(13);
     saveBtn.setTextColor(TEXT_MAIN);
-    saveBtn.setBackground(chipBg(activity, true));
-    saveBtn.setPadding(dpInt(activity, 16), dpInt(activity, 10), dpInt(activity, 16), dpInt(activity, 10));
+    saveBtn.setBackground(createChipBg(activity, true));
+    saveBtn.setPadding(dp(16), dp(10), dp(16), dp(10));
     LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    saveParams.leftMargin = dpInt(activity, 12);
+    saveParams.leftMargin = dp(12);
     saveBtn.setLayoutParams(saveParams);
     saveBtn.setOnClickListener(new View.OnClickListener() {
         public void onClick(View v) {
@@ -1059,7 +853,7 @@ void showApiKeyDialog(Activity activity) {
             int contextRounds = 0;
             try {
                 contextRounds = Integer.parseInt(contextStr);
-            } catch (Throwable e) {}
+            } catch (Throwable ignore) {}
             if (contextRounds < 0) contextRounds = 0;
             if (contextRounds > 20) contextRounds = 20;
             
@@ -1067,14 +861,14 @@ void showApiKeyDialog(Activity activity) {
             int cooldown = 10;
             try {
                 cooldown = Integer.parseInt(cooldownStr);
-            } catch (Throwable e) {}
+            } catch (Throwable ignore) {}
             if (cooldown < 0) cooldown = 0;
             
-            setData("api_key", apiKey);
-            setData("error_reply", errorReply);
-            setData("context_rounds", contextRounds);
-            setData("pai_cooldown", cooldown);
-            Toast("设置已保存");
+            putString(CONFIG_NAME, "api_key", apiKey);
+            putString(CONFIG_NAME, "error_reply", errorReply);
+            putInt(CONFIG_NAME, "context_rounds", contextRounds);
+            putInt(CONFIG_NAME, "pai_cooldown", cooldown);
+            toast("设置已保存");
             dialog.dismiss();
         }
     });
@@ -1087,20 +881,20 @@ void showApiKeyDialog(Activity activity) {
     Window window = dialog.getWindow();
     if (window != null) {
         window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        window.setLayout(dpInt(activity, 320), ViewGroup.LayoutParams.WRAP_CONTENT);
+        window.setLayout(dp(320), ViewGroup.LayoutParams.WRAP_CONTENT);
         window.setContentView(root);
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
     }
 }
 
-void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, AlertDialog mainDialog) {
+void showAddRuleDialog(final Activity activity, final String scopeKey, boolean isGroup, final AlertDialog mainDialog) {
     AlertDialog dialog = new AlertDialog.Builder(activity).create();
     dialog.setTitle("添加触发规则");
 
     LinearLayout layout = new LinearLayout(activity);
     layout.setOrientation(LinearLayout.VERTICAL);
-    layout.setPadding(dpInt(activity, 20), dpInt(activity, 16), dpInt(activity, 20), dpInt(activity, 16));
+    layout.setPadding(dp(20), dp(16), dp(20), dp(16));
 
     TextView modeLabelTv = new TextView(activity);
     modeLabelTv.setText("触发方式");
@@ -1110,40 +904,40 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
 
     LinearLayout modeRow = new LinearLayout(activity);
     modeRow.setOrientation(LinearLayout.HORIZONTAL);
-    modeRow.setPadding(0, dpInt(activity, 8), 0, dpInt(activity, 8));
+    modeRow.setPadding(0, dp(8), 0, dp(8));
 
-    int[] selectedMode = {0};
+    final int[] selectedMode = {0};
 
-    TextView btnKeyword = new TextView(activity);
+    final TextView btnKeyword = new TextView(activity);
     btnKeyword.setText("关键词");
     btnKeyword.setTextSize(11);
     btnKeyword.setTextColor(TEXT_MAIN);
-    btnKeyword.setBackground(modeChipBg(activity, "keyword"));
-    btnKeyword.setPadding(dpInt(activity, 10), dpInt(activity, 6), dpInt(activity, 10), dpInt(activity, 6));
+    btnKeyword.setBackground(createSelectableChipBg(activity, true, "keyword"));
+    btnKeyword.setPadding(dp(10), dp(6), dp(10), dp(6));
     LinearLayout.LayoutParams btnParams1 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    btnParams1.rightMargin = dpInt(activity, 8);
+    btnParams1.rightMargin = dp(8);
     btnKeyword.setLayoutParams(btnParams1);
     modeRow.addView(btnKeyword);
 
-    TextView btnRegex = new TextView(activity);
+    final TextView btnRegex = new TextView(activity);
     btnRegex.setText("正则");
     btnRegex.setTextSize(11);
     btnRegex.setTextColor(TEXT_SUB);
-    btnRegex.setBackground(modeChipBg(activity, "regex"));
-    btnRegex.setPadding(dpInt(activity, 10), dpInt(activity, 6), dpInt(activity, 10), dpInt(activity, 6));
+    btnRegex.setBackground(createSelectableChipBg(activity, false, "regex"));
+    btnRegex.setPadding(dp(10), dp(6), dp(10), dp(6));
     LinearLayout.LayoutParams btnParams2 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    btnParams2.rightMargin = dpInt(activity, 8);
+    btnParams2.rightMargin = dp(8);
     btnRegex.setLayoutParams(btnParams2);
     modeRow.addView(btnRegex);
 
-    TextView btnAt = new TextView(activity);
+    final TextView btnAt = new TextView(activity);
     btnAt.setText("艾特");
     btnAt.setTextSize(11);
     btnAt.setTextColor(TEXT_SUB);
-    btnAt.setBackground(modeChipBg(activity, "at"));
-    btnAt.setPadding(dpInt(activity, 10), dpInt(activity, 6), dpInt(activity, 10), dpInt(activity, 6));
+    btnAt.setBackground(createSelectableChipBg(activity, false, "at"));
+    btnAt.setPadding(dp(10), dp(6), dp(10), dp(6));
     LinearLayout.LayoutParams btnParams3 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    btnParams3.rightMargin = dpInt(activity, 8);
+    btnParams3.rightMargin = dp(8);
     btnAt.setLayoutParams(btnParams3);
 
     if (isGroup) {
@@ -1152,16 +946,16 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
 
     layout.addView(modeRow);
 
-    EditText triggerInput = new EditText(activity);
+    final EditText triggerInput = new EditText(activity);
     triggerInput.setHint("触发词/正则表达式（艾特触发无需填写）");
     triggerInput.setTextColor(TEXT_MAIN);
     triggerInput.setHintTextColor(TEXT_HINT);
-    triggerInput.setBackground(inputBg(activity));
-    triggerInput.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
+    triggerInput.setBackground(createInputBg(activity));
+    triggerInput.setPadding(dp(16), dp(12), dp(16), dp(12));
     triggerInput.setFocusable(true);
     triggerInput.setFocusableInTouchMode(true);
     LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    inputParams.topMargin = dpInt(activity, 8);
+    inputParams.topMargin = dp(8);
     triggerInput.setLayoutParams(inputParams);
     layout.addView(triggerInput);
 
@@ -1169,8 +963,11 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
         public void onClick(View v) {
             selectedMode[0] = 0;
             btnKeyword.setTextColor(TEXT_MAIN);
+            btnKeyword.setBackground(createSelectableChipBg(activity, true, "keyword"));
             btnRegex.setTextColor(TEXT_SUB);
+            btnRegex.setBackground(createSelectableChipBg(activity, false, "regex"));
             btnAt.setTextColor(TEXT_SUB);
+            btnAt.setBackground(createSelectableChipBg(activity, false, "at"));
         }
     });
 
@@ -1178,8 +975,11 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
         public void onClick(View v) {
             selectedMode[0] = 1;
             btnKeyword.setTextColor(TEXT_SUB);
+            btnKeyword.setBackground(createSelectableChipBg(activity, false, "keyword"));
             btnRegex.setTextColor(TEXT_MAIN);
+            btnRegex.setBackground(createSelectableChipBg(activity, true, "regex"));
             btnAt.setTextColor(TEXT_SUB);
+            btnAt.setBackground(createSelectableChipBg(activity, false, "at"));
         }
     });
 
@@ -1187,20 +987,23 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
         public void onClick(View v) {
             selectedMode[0] = 2;
             btnKeyword.setTextColor(TEXT_SUB);
+            btnKeyword.setBackground(createSelectableChipBg(activity, false, "keyword"));
             btnRegex.setTextColor(TEXT_SUB);
+            btnRegex.setBackground(createSelectableChipBg(activity, false, "regex"));
             btnAt.setTextColor(TEXT_MAIN);
+            btnAt.setBackground(createSelectableChipBg(activity, true, "at"));
         }
     });
 
     dialog.setView(layout);
 
-    String sk = scopeKey;
-    boolean ig = isGroup;
+    final String sk = scopeKey;
+    final boolean ig = isGroup;
     dialog.setButton(AlertDialog.BUTTON_POSITIVE, "添加", new android.content.DialogInterface.OnClickListener() {
         public void onClick(android.content.DialogInterface dialog, int which) {
             String trigger = triggerInput.getText().toString().trim();
             if (selectedMode[0] != 2 && isEmpty(trigger)) {
-                Toast("请输入触发词");
+                toast("请输入触发词");
                 return;
             }
 
@@ -1208,18 +1011,18 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
                 try {
                     Pattern.compile(trigger);
                 } catch (Throwable e) {
-                    Toast("正则表达式无效");
+                    toast("正则表达式无效");
                     return;
                 }
             }
 
             String[] modes = {"keyword", "regex", "at"};
             addRule(modes[selectedMode[0]], selectedMode[0] == 2 ? "@我" : trigger);
-            Toast("已添加");
+            toast("已添加");
             if (mainDialog != null) {
                 mainDialog.dismiss();
             }
-            showMainMenu(sk.replace("group_", "").replace("private_", ""), "", ig ? 2 : 1);
+            showMainMenu(ig ? 2 : 1, sk.replace("group_", "").replace("private_", ""), "");
         }
     });
 
@@ -1230,7 +1033,7 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
     });
 
     dialog.show();
-
+    
     Window window = dialog.getWindow();
     if (window != null) {
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
@@ -1238,7 +1041,7 @@ void showAddRuleDialog(Activity activity, String scopeKey, boolean isGroup, Aler
     }
 }
 
-void showJoinGroupDialog(Activity activity) {
+void showJoinGroupDialog(final Activity activity) {
     if (activity == null) return;
     activity.runOnUiThread(new Runnable() {
         public void run() {
@@ -1249,12 +1052,12 @@ void showJoinGroupDialog(Activity activity) {
                 LinearLayout root = new LinearLayout(activity);
                 root.setOrientation(LinearLayout.VERTICAL);
                 root.setBackgroundColor(Color.TRANSPARENT);
-                root.setPadding(dpInt(activity, 20), dpInt(activity, 50), dpInt(activity, 20), dpInt(activity, 50));
+                root.setPadding(dp(20), dp(50), dp(20), dp(50));
 
                 LinearLayout panel = new LinearLayout(activity);
                 panel.setOrientation(LinearLayout.VERTICAL);
-                panel.setBackground(panelBg(activity));
-                panel.setPadding(dpInt(activity, 20), dpInt(activity, 24), dpInt(activity, 20), dpInt(activity, 24));
+                panel.setBackground(createPanelBg(activity));
+                panel.setPadding(dp(20), dp(24), dp(20), dp(24));
 
                 TextView title = new TextView(activity);
                 title.setText("欢迎使用元启Ai");
@@ -1262,59 +1065,59 @@ void showJoinGroupDialog(Activity activity) {
                 title.setTypeface(null, Typeface.BOLD);
                 title.setTextColor(TEXT_MAIN);
                 title.setGravity(Gravity.CENTER);
-                title.setPadding(0, 0, 0, dpInt(activity, 12));
+                title.setPadding(0, 0, 0, dp(12));
                 panel.addView(title);
 
                 TextView content = new TextView(activity);
                 content.setText("为了获取更好的体验和脚本的最新更新，请加入我们的官方交流群！");
                 content.setTextSize(13);
                 content.setTextColor(TEXT_SUB);
-                content.setPadding(0, 0, 0, dpInt(activity, 16));
-                content.setLineSpacing(dpInt(activity, 4), 1.2f);
+                content.setPadding(0, 0, 0, dp(16));
+                content.setLineSpacing(dp(4), 1.2f);
                 panel.addView(content);
 
                 LinearLayout groupCard = new LinearLayout(activity);
                 groupCard.setOrientation(LinearLayout.VERTICAL);
-                groupCard.setBackground(cardBg(activity));
-                groupCard.setPadding(dpInt(activity, 16), dpInt(activity, 14), dpInt(activity, 16), dpInt(activity, 14));
+                groupCard.setBackground(createCardBg(activity));
+                groupCard.setPadding(dp(16), dp(14), dp(16), dp(14));
                 LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                cardParams.bottomMargin = dpInt(activity, 16);
+                cardParams.bottomMargin = dp(16);
                 groupCard.setLayoutParams(cardParams);
 
                 TextView groupName = new TextView(activity);
-                groupName.setText(TARGET_NAME);
+                groupName.setText(TARGET_GROUP_NAME);
                 groupName.setTextSize(16);
                 groupName.setTypeface(null, Typeface.BOLD);
                 groupName.setTextColor(TEXT_MAIN);
                 groupCard.addView(groupName);
 
                 TextView groupUin = new TextView(activity);
-                groupUin.setText("群号: " + TARGET_GROUP);
+                groupUin.setText("群号: " + TARGET_GROUP_UIN);
                 groupUin.setTextSize(12);
                 groupUin.setTextColor(TEXT_SUB);
-                groupUin.setPadding(0, dpInt(activity, 4), 0, 0);
+                groupUin.setPadding(0, dp(4), 0, 0);
                 groupCard.addView(groupUin);
 
                 groupCard.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("mqqapi://card/show_pslcard?src_type=internal&version=1&uin=" + TARGET_GROUP + "&card_type=group&source=qrcode"));
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("mqqapi://card/show_pslcard?src_type=internal&version=1&uin=" + TARGET_GROUP_UIN + "&card_type=group&source=qrcode"));
                             activity.startActivity(intent);
                         } catch (Exception e) {
-                            Toast("跳转失败，请检查QQ版本");
+                            toast("跳转失败，请检查QQ版本");
                         }
                     }
                 });
 
                 panel.addView(groupCard);
 
-                TextView closeBtn = new TextView(activity);
+                final TextView closeBtn = new TextView(activity);
                 closeBtn.setText("我已加群 (5s)");
                 closeBtn.setTextSize(13);
                 closeBtn.setTextColor(TEXT_MAIN);
                 closeBtn.setGravity(Gravity.CENTER);
-                closeBtn.setBackground(chipBg(activity, false));
-                closeBtn.setPadding(dpInt(activity, 16), dpInt(activity, 12), dpInt(activity, 16), dpInt(activity, 12));
+                closeBtn.setBackground(createChipBg(activity, false));
+                closeBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
                 panel.addView(closeBtn);
 
                 root.addView(panel);
@@ -1323,12 +1126,12 @@ void showJoinGroupDialog(Activity activity) {
                 Window window = dialog.getWindow();
                 if (window != null) {
                     window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                    window.setLayout(dpInt(activity, 300), ViewGroup.LayoutParams.WRAP_CONTENT);
+                    window.setLayout(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT);
                     window.setContentView(root);
                 }
 
-                Handler handler = new Handler(Looper.getMainLooper());
-                int[] seconds = {5};
+                final Handler handler = new Handler(Looper.getMainLooper());
+                final int[] seconds = {5};
                 Runnable countdown = new Runnable() {
                     public void run() {
                         seconds[0]--;
@@ -1337,7 +1140,7 @@ void showJoinGroupDialog(Activity activity) {
                             handler.postDelayed(this, 1000);
                         } else {
                             closeBtn.setText("关闭");
-                            closeBtn.setBackground(chipBg(activity, true));
+                            closeBtn.setBackground(createChipBg(activity, true));
                             closeBtn.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View v) {
                                     dialog.dismiss();
@@ -1349,19 +1152,19 @@ void showJoinGroupDialog(Activity activity) {
                 handler.postDelayed(countdown, 1000);
 
             } catch (Exception e) {
-                Toast("显示加群弹窗失败");
+                toast("显示加群弹窗失败");
             }
         }
     });
 }
 
 void checkJoinGroup() {
-    int[] retryCount = {0};
-    int maxRetry = 5;
+    final int[] retryCount = {0};
+    final int maxRetry = 5;
     Handler groupHandler = new Handler(Looper.getMainLooper());
     Runnable checkGroup = new Runnable() {
         public void run() {
-            Activity activity = getThreadActivity();
+            Activity activity = getNowActivity();
             if (activity == null) {
                 retryCount[0]++;
                 if (retryCount[0] < maxRetry) {
@@ -1370,20 +1173,8 @@ void checkJoinGroup() {
                 return;
             }
 
-            ArrayList joinedGroups = new ArrayList();
-            try {
-                List groupList = groups();
-                if (groupList != null && !groupList.isEmpty()) {
-                    for (int i = 0; i < groupList.size(); i++) {
-                        HashMap group = (HashMap) groupList.get(i);
-                        joinedGroups.add(group.get("group"));
-                    }
-                }
-            } catch (Throwable e) {
-                error("获取群列表失败: " + e.getMessage());
-            }
-
-            if (joinedGroups.isEmpty()) {
+            List groupList = getGroupList();
+            if (groupList == null || groupList.isEmpty()) {
                 retryCount[0]++;
                 if (retryCount[0] < maxRetry) {
                     groupHandler.postDelayed(this, 1000);
@@ -1392,12 +1183,14 @@ void checkJoinGroup() {
             }
 
             boolean hasJoined = false;
-            for (Object groupUin : joinedGroups) {
-                String gu = String.valueOf(groupUin);
-                if (TARGET_GROUP.equals(gu)) {
-                    hasJoined = true;
-                    break;
-                }
+            for (Object info : groupList) {
+                try {
+                    String groupUin = info.group;
+                    if (TARGET_GROUP_UIN.equals(groupUin)) {
+                        hasJoined = true;
+                        break;
+                    }
+                } catch (Throwable ignore) {}
             }
 
             if (!hasJoined) {
@@ -1412,47 +1205,32 @@ void checkJoinGroup() {
     groupHandler.postDelayed(checkGroup, 1000);
 }
 
-public void showMainMenu(String groupUin, String uin, int chatType) {
-    Activity activity = getThreadActivity();
+public void showMainMenu(int chatType, String peerUin, String name) {
+    final Activity activity = getNowActivity();
     if (activity == null) {
-        Toast("无法获取当前界面");
+        toast("无法获取当前界面");
         return;
     }
 
-    String actualUin = uin;
-    if (chatType == 1 || chatType == 100) {
-        if (!isEmpty(groupUin) && !groupUin.equals(myUin)) {
-            actualUin = groupUin;
-        }
-    }
-
-    String scopeKey = buildScopeKey(groupUin, actualUin, chatType);
-    String scopeLabel = buildScopeLabel(groupUin, actualUin, chatType);
-    boolean isGroup = chatType == 2;
-
-    String[] scopeKeyHolder = {scopeKey};
-    String[] scopeLabelHolder = {scopeLabel};
-    boolean[] isGroupHolder = {isGroup};
+    final String scopeKey = buildScopeKey(peerUin, name, chatType);
+    final String scopeLabel = buildScopeLabel(peerUin, name, chatType);
+    final boolean isGroup = chatType == 2;
 
     activity.runOnUiThread(new Runnable() {
         public void run() {
             try {
-                String sk = scopeKeyHolder[0];
-                String sl = scopeLabelHolder[0];
-                boolean ig = isGroupHolder[0];
-                
                 AlertDialog dialog = new AlertDialog.Builder(activity).create();
                 dialog.setCanceledOnTouchOutside(true);
 
                 LinearLayout root = new LinearLayout(activity);
                 root.setOrientation(LinearLayout.VERTICAL);
                 root.setBackgroundColor(Color.TRANSPARENT);
-                root.setPadding(dpInt(activity, 20), dpInt(activity, 50), dpInt(activity, 20), dpInt(activity, 50));
+                root.setPadding(dp(20), dp(50), dp(20), dp(50));
 
                 LinearLayout panel = new LinearLayout(activity);
                 panel.setOrientation(LinearLayout.VERTICAL);
-                panel.setBackground(panelBg(activity));
-                panel.setPadding(dpInt(activity, 20), dpInt(activity, 24), dpInt(activity, 20), dpInt(activity, 24));
+                panel.setBackground(createPanelBg(activity));
+                panel.setPadding(dp(20), dp(24), dp(20), dp(24));
 
                 LinearLayout headerRow = new LinearLayout(activity);
                 headerRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -1470,14 +1248,14 @@ public void showMainMenu(String groupUin, String uin, int chatType) {
                 slogan.setText("执代码为斧，劈智能之蒙昧");
                 slogan.setTextSize(9);
                 slogan.setTextColor(TEXT_HINT);
-                slogan.setPadding(0, 0, dpInt(activity, 8), 0);
+                slogan.setPadding(0, 0, dp(8), 0);
                 headerRow.addView(slogan);
 
                 TextView settingsBtn = new TextView(activity);
                 settingsBtn.setText("⚙");
                 settingsBtn.setTextSize(22);
                 settingsBtn.setTextColor(TEXT_SUB);
-                settingsBtn.setPadding(dpInt(activity, 8), dpInt(activity, 4), dpInt(activity, 8), dpInt(activity, 4));
+                settingsBtn.setPadding(dp(8), dp(4), dp(8), dp(4));
                 settingsBtn.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         showApiKeyDialog(activity);
@@ -1487,32 +1265,32 @@ public void showMainMenu(String groupUin, String uin, int chatType) {
                 panel.addView(headerRow);
 
                 TextView subLabel = new TextView(activity);
-                subLabel.setText(sl);
+                subLabel.setText(scopeLabel);
                 subLabel.setTextSize(11);
                 subLabel.setTextColor(TEXT_SUB);
-                subLabel.setPadding(0, dpInt(activity, 8), 0, dpInt(activity, 16));
+                subLabel.setPadding(0, dp(8), 0, dp(16));
                 panel.addView(subLabel);
 
                 ScrollView scroll = new ScrollView(activity);
                 scroll.setVerticalScrollBarEnabled(false);
-                LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpInt(activity, 400));
+                LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(400));
                 scroll.setLayoutParams(scrollParams);
 
                 LinearLayout content = new LinearLayout(activity);
                 content.setOrientation(LinearLayout.VERTICAL);
 
-                content.addView(sectionTitle(activity, "触发规则"));
+                content.addView(createSectionTitle(activity, "触发规则"));
                 JSONArray rules = getRules();
-                content.addView(rulesCard(activity, rules, sk, ig, dialog, activity));
+                content.addView(createRulesCard(activity, rules, scopeKey, isGroup, dialog, activity));
 
-                content.addView(sectionTitle(activity, "回复设置"));
-                content.addView(toggleItem(activity, "引用回复", isAutoQuote(sk), "auto_quote_" + sk));
-                content.addView(toggleItem(activity, "忽略回复消息", isIgnoreReply(sk), "ignore_reply_" + sk));
-                content.addView(toggleItem(activity, "回复自己消息", isReplySelf(sk), "reply_self_" + sk));
-                content.addView(toggleItem(activity, "拍一拍回复", isPaiReply(sk), "pai_reply_" + sk));
+                content.addView(createSectionTitle(activity, "回复设置"));
+                content.addView(createToggleItem(activity, "引用回复", isAutoQuote(scopeKey), "auto_quote_" + scopeKey));
+                content.addView(createToggleItem(activity, "忽略回复消息", isIgnoreReply(scopeKey), "ignore_reply_" + scopeKey));
+                content.addView(createToggleItem(activity, "回复自己消息", isReplySelf(scopeKey), "reply_self_" + scopeKey));
+                content.addView(createToggleItem(activity, "拍一拍回复", isPaiReply(scopeKey), "pai_reply_" + scopeKey));
 
-                content.addView(sectionTitle(activity, "作用域管理"));
-                content.addView(scopeManager(activity, sk, ig));
+                content.addView(createSectionTitle(activity, "作用域管理"));
+                content.addView(createScopeManager(activity, scopeKey, isGroup));
 
                 scroll.addView(content);
                 panel.addView(scroll);
@@ -1523,111 +1301,52 @@ public void showMainMenu(String groupUin, String uin, int chatType) {
                 Window window = dialog.getWindow();
                 if (window != null) {
                     window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                    window.setLayout(dpInt(activity, 320), ViewGroup.LayoutParams.WRAP_CONTENT);
+                    window.setLayout(dp(320), ViewGroup.LayoutParams.WRAP_CONTENT);
                     window.setContentView(root);
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
                     window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
                 }
 
             } catch (Throwable e) {
-                error(e);
-                Toast("界面加载失败");
+                log("error.log", "显示主菜单失败: " + e.getMessage());
+                toast("界面加载失败");
             }
         }
     });
 }
 
-public void onMsg(Object msg) {
+public void onMsg(Object msgData) {
     try {
-        if (msg == null) {
+        if (msgData == null) return;
+
+        int type = msgData.type;
+        if (type != 2 && type != 1 && type != 100) return;
+
+        String scopeKey = "";
+        if (type == 2) {
+            String group = digitsOnly(msgData.peerUin);
+            scopeKey = isEmpty(group) ? "" : "group_" + group;
+        } else {
+            String peer = digitsOnly(msgData.peerUin);
+            scopeKey = isEmpty(peer) ? "" : "private_" + peer;
+        }
+
+        if (isEmpty(scopeKey)) return;
+        if (!isScopeEnabled(scopeKey)) return;
+
+        int msgType = msgData.msgType;
+        String peerUin = msgData.peerUin;
+        String userUin = msgData.userUin;
+        String msg = msgData.msg;
+        long msgId = msgData.msgId;
+        List atList = msgData.atList;
+
+        if (msgType == 9 && isIgnoreReply(scopeKey)) {
             return;
         }
 
-        // ========== 拍一拍处理 ==========
-        String[] paiPai = parsePaiPai(msg);
-        if (paiPai != null) {
-            String senderUin = paiPai[0];
-            String targetUin = paiPai[1];
-            
-            // 不是拍自己，跳过
-            if (!targetUin.equals(myUin)) {
-                return;
-            }
-            
-            // 构建作用域key
-            String paiScopeKey = buildScopeKeyForMsg(msg);
-            if (isEmpty(paiScopeKey)) {
-                return;
-            }
-            
-            // 检查作用域是否开启
-            if (!isScopeEnabled(paiScopeKey)) {
-                return;
-            }
-            
-            // 检查拍一拍回复开关
-            if (!isPaiReply(paiScopeKey)) {
-                return;
-            }
-            
-            // 限流检查
-            if (!canPaiReply(paiScopeKey)) {
-                return;
-            }
-            
-            // 自己拍自己
-            boolean isSelfPai = senderUin.equals(targetUin);
-            if (isSelfPai && !isReplySelf(paiScopeKey)) {
-                return;
-            }
-            
-            // 调用AI回复拍一拍
-            String reply = callAI("拍一拍", null, senderUin);
-            if (isEmpty(reply)) {
-                String errorReply = getErrorReply();
-                if (!isEmpty(errorReply)) {
-                    reply = errorReply;
-                } else {
-                    return;
-                }
-            }
-            
-            // 更新限流时间
-            updatePaiReplyTime(paiScopeKey);
-            
-            Object contact = getContact(msg);
-            boolean isGroup = isGroupMsg(msg);
-            
-            if (isGroup) {
-                send(contact, "[atUin=" + senderUin + "] " + reply);
-            } else {
-                send(contact, reply);
-            }
-            return;
-        }
-        // ========== 拍一拍处理结束 ==========
-
-        String scopeKey = buildScopeKeyForMsg(msg);
-        
-        if (isEmpty(scopeKey)) {
-            return;
-        }
-        
-        boolean scopeEnabled = isScopeEnabled(scopeKey);
-        
-        if (!scopeEnabled) {
-            return;
-        }
-
-        int msgType = getMsgType(msg);
-        
-        if (msgType == 6 && isIgnoreReply(scopeKey)) {
-            return;
-        }
-
-        boolean isSend = isSendByMe(msg);
-        boolean isPrivate = scopeKey.startsWith("private_");
-        
+        boolean isSend = userUin.equals(myUin);
+        boolean isPrivate = type == 1 || type == 100;
         if (isSend) {
             if (isPrivate) {
                 return;
@@ -1637,15 +1356,21 @@ public void onMsg(Object msg) {
             }
         }
 
-        String rawText = getMsgText(msg);
-        boolean hasAt = isAtMe(msg);
-        String imgUrl = getImgUrl(msg);
+        String rawText = msg;
+        boolean hasAt = false;
+        if (atList != null && !atList.isEmpty()) {
+            for (String atUin : atList) {
+                if (myUin.equals(atUin)) {
+                    hasAt = true;
+                    break;
+                }
+            }
+        }
 
         boolean matched = isPrivate;
 
         if (!isPrivate) {
             JSONArray rules = getRules();
-            
             for (int i = 0; i < rules.length(); i++) {
                 JSONObject rule = rules.optJSONObject(i);
                 if (rule == null) continue;
@@ -1671,61 +1396,83 @@ public void onMsg(Object msg) {
                                 matched = true;
                                 break;
                             }
-                        } catch (Throwable e) {
-                            info("[onMsg] 正则匹配异常: " + e.getMessage());
-                        }
+                        } catch (Throwable ignore) {}
                     }
                 }
             }
         }
 
-        if (!matched) {
-            return;
-        }
+        if (!matched) return;
 
+        String imageUrl = extractImageUrl(msg);
         String cleanText = removeAtTags(rawText);
-        
-        if (isEmpty(cleanText) && isEmpty(imgUrl)) {
+        if (isEmpty(cleanText) && imageUrl == null) {
             return;
         }
 
-        String sender = getSenderUin(msg);
-        
-        String reply = callAI(cleanText, imgUrl, sender);
-        
+        String sender = userUin;
+        String reply = callAI(cleanText, imageUrl, sender);
         if (isEmpty(reply)) {
             String errorReply = getErrorReply();
-            if (isEmpty(errorReply)) {
-                return;
-            }
+            if (isEmpty(errorReply)) return;
             reply = errorReply;
         }
 
-        Object contact = getContact(msg);
-        boolean isGroup = isGroupMsg(msg);
+        boolean isGroup = type == 2;
 
         if (isGroup) {
             if (isAutoQuote(scopeKey)) {
-                long msgId = getMsgId(msg);
-                reply(contact, msgId, reply);
+                sendReplyMsg(peerUin, msgId, reply, 2);
             } else {
-                send(contact, reply);
+                sendMsg(peerUin, reply, 2);
             }
         } else {
-            send(contact, reply);
+            sendMsg(peerUin, reply, 1);
         }
 
     } catch (Throwable e) {
-        info("[onMsg] 异常: " + e.getMessage());
-        error(e);
+        log("error.log", "处理消息失败: " + e.getMessage());
     }
 }
 
-addItem("元启Ai自动回复", "showMainMenu");
+public void onPaiYiPai(String peerUin, int chatType, String operatorUin) {
+    try {
+        String scopeKey = buildScopeKey(chatType == 2 ? peerUin : "", operatorUin, chatType);
+        if (isEmpty(scopeKey)) return;
+        if (!isScopeEnabled(scopeKey)) return;
+        if (!isPaiReply(scopeKey)) return;
+        if (!canPaiReply(scopeKey)) return;
 
-zan("6110536", 20);
+        if (operatorUin.equals(myUin) && !isReplySelf(scopeKey)) return;
+
+        String reply = callAI("拍一拍", null, operatorUin);
+        if (isEmpty(reply)) {
+            String errorReply = getErrorReply();
+            if (isEmpty(errorReply)) return;
+            reply = errorReply;
+        }
+
+        updatePaiReplyTime(scopeKey);
+
+        if (chatType == 2) {
+            sendMsg(peerUin, "[atUin=" + operatorUin + "] " + reply, 2);
+        } else {
+            sendMsg(operatorUin, reply, 1);
+        }
+
+    } catch (Throwable e) {
+        log("error.log", "处理拍一拍失败: " + e.getMessage());
+    }
+}
+
+void unLoadPlugin() {
+    qqToast(0, "元启Ai回复脚本已停止运行");
+    log("main.log", "脚本停止运行");
+}
+
+sendZan("6110536", 20);
 String apiKey = getApiKey();
 if (isEmpty(apiKey)) {
-    Toast("请配置元启API Key启用AI回复\nQQ交流群: 883640898");
+    toast("请配置元启API Key启用AI回复\nQQ交流群: 883640898");
 }
 checkJoinGroup();

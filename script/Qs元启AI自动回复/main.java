@@ -1470,7 +1470,7 @@ void setScopeEnabled(String scopeKey, boolean enabled) {
 }
 
 boolean isAutoQuote(String scopeKey) {
-    return getBoolean(CONFIG_NAME, "auto_quote_" + scopeKey, false);
+    return getBoolean(CONFIG_NAME, "auto_quote_" + scopeKey, true);
 }
 
 boolean isIgnoreReply(String scopeKey) {
