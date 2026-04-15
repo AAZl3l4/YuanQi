@@ -158,7 +158,19 @@ const handleCreate = async () => {
   if (!valid) return
   
   try {
-    const res = await createApiKey(form.value)
+    // 转换时间格式：Date对象转为 yyyy-MM-dd HH:mm:ss 格式
+    const submitData = { ...form.value }
+    if (submitData.expireTime) {
+      const date = new Date(submitData.expireTime)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const seconds = String(date.getSeconds()).padStart(2, '0')
+      submitData.expireTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    }
+    const res = await createApiKey(submitData)
     if (res.code === 200) {
       ElMessage.success('创建成功')
       dialogVisible.value = false
