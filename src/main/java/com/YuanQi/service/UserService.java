@@ -28,6 +28,11 @@ public interface UserService extends IService<User> {
     void login(UserDTO userDTO);
 
     /**
+     * 修改密码
+     */
+    void changePassword(Long userId, UserDTO userDTO);
+
+    /**
      * 获取当前登录用户信息
      */
     User getCurrentUser();

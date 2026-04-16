@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { register, sendCode } from '@/api/user'
+import { register, sendCode, getCaptcha } from '@/api/user'
 
 const router = useRouter()
 
@@ -12,6 +12,12 @@ const codeLoading = ref(false)
 const countdown = ref(0)
 const showInfoDialog = ref(false)
 const showQrFullscreen = ref(false)
+
+// 图片验证码弹窗
+const showCaptchaDialog = ref(false)
+const captchaId = ref('')
+const captchaImage = ref('')
+const captchaAnswer = ref('')
 
 const form = reactive({
   username: '',
@@ -56,17 +62,48 @@ const rules = {
   ]
 }
 
-const handleSendCode = async () => {
+// 获取图片验证码
+const refreshCaptcha = async () => {
+  try {
+    const res = await getCaptcha()
+    if (res.code === 200) {
+      captchaId.value = res.data.captchaId
+      captchaImage.value = res.data.captchaImage
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// 打开图片验证码弹窗
+const openCaptchaDialog = () => {
   if (!form.email) {
     ElMessage.warning('请先输入邮箱')
+    return
+  }
+  captchaAnswer.value = ''
+  refreshCaptcha()
+  showCaptchaDialog.value = true
+}
+
+// 确认图片验证码并发送邮件验证码
+const confirmCaptchaAndSendCode = async () => {
+  if (!captchaAnswer.value) {
+    ElMessage.warning('请输入验证码')
     return
   }
   
   codeLoading.value = true
   try {
-    const res = await sendCode(form.email)
+    const res = await sendCode({
+      email: form.email,
+      captchaId: captchaId.value,
+      captchaAnswer: captchaAnswer.value
+    })
     if (res.code === 200) {
-      ElMessage.success('验证码已发送')
+      ElMessage.success('验证码发送中，请稍候')
+      showCaptchaDialog.value = false
+      // 立即开始倒计时
       countdown.value = 60
       const timer = setInterval(() => {
         countdown.value--
@@ -76,6 +113,8 @@ const handleSendCode = async () => {
       }, 1000)
     }
   } catch (error) {
+    refreshCaptcha()
+    captchaAnswer.value = ''
     console.error(error)
   } finally {
     codeLoading.value = false
@@ -310,8 +349,8 @@ onUnmounted(() => {
             <div class="code-input">
               <el-input
                 v-model="form.verifyCode"
-                placeholder="请输入验证码"
-                prefix-icon="Key"
+                placeholder="请输入邮箱验证码"
+                prefix-icon="Message"
                 size="large"
                 maxlength="6"
               />
@@ -320,7 +359,7 @@ onUnmounted(() => {
                 size="large"
                 :loading="codeLoading"
                 :disabled="countdown > 0"
-                @click="handleSendCode"
+                @click="openCaptchaDialog"
               >
                 {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
               </el-button>
@@ -446,6 +485,39 @@ onUnmounted(() => {
         <img src="/ma.png" alt="打赏二维码" class="qr-fullscreen" />
         <p class="qr-tip">感谢支持 ❤️</p>
       </div>
+    </el-dialog>
+    
+    <!-- 图片验证码弹窗 -->
+    <el-dialog
+      v-model="showCaptchaDialog"
+      title="安全验证"
+      width="360px"
+      :close-on-click-modal="false"
+      align-center
+      class="captcha-dialog"
+    >
+      <div class="captcha-content">
+        <div class="captcha-image-wrapper" @click="refreshCaptcha">
+          <img v-if="captchaImage" :src="captchaImage" alt="验证码" class="captcha-img" />
+          <span v-else class="captcha-loading">加载中...</span>
+        </div>
+        <p class="captcha-tip">请计算图中算式的结果</p>
+        <el-input
+          v-model="captchaAnswer"
+          placeholder="请输入计算结果"
+          size="large"
+          maxlength="10"
+          @keyup.enter="confirmCaptchaAndSendCode"
+        />
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showCaptchaDialog = false">取消</el-button>
+          <el-button type="primary" :loading="codeLoading" @click="confirmCaptchaAndSendCode">
+            确认
+          </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -786,6 +858,58 @@ onUnmounted(() => {
 
 .code-input .el-input {
   flex: 1;
+}
+
+.captcha-dialog .captcha-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.captcha-image-wrapper {
+  width: 200px;
+  height: 60px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  transition: all 0.3s ease;
+}
+
+.captcha-image-wrapper:hover {
+  border-color: var(--color-primary);
+}
+
+.captcha-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-loading {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.captcha-tip {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.captcha-dialog .el-input {
+  width: 200px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
 }
 
 .register-btn {

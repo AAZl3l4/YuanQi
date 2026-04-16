@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, sendCode } from '@/api/user'
+import { login, getCaptcha } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -10,15 +10,18 @@ const userStore = useUserStore()
 
 const formRef = ref()
 const loading = ref(false)
-const codeLoading = ref(false)
-const countdown = ref(0)
 const showInfoDialog = ref(false)
 const showQrFullscreen = ref(false)
+
+// 图片验证码
+const captchaId = ref('')
+const captchaImage = ref('')
 
 const form = reactive({
   email: '',
   password: '',
-  verifyCode: ''
+  captchaId: '',
+  captchaAnswer: ''
 })
 
 const rules = {
@@ -30,35 +33,22 @@ const rules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码至少6位', trigger: 'blur' }
   ],
-  verifyCode: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { len: 6, message: '验证码为6位', trigger: 'blur' }
+  captchaAnswer: [
+    { required: true, message: '请输入验证码', trigger: 'blur' }
   ]
 }
 
-const handleSendCode = async () => {
-  if (!form.email) {
-    ElMessage.warning('请先输入邮箱')
-    return
-  }
-  
-  codeLoading.value = true
+// 获取图片验证码
+const refreshCaptcha = async () => {
   try {
-    const res = await sendCode(form.email)
+    const res = await getCaptcha()
     if (res.code === 200) {
-      ElMessage.success('验证码已发送')
-      countdown.value = 60
-      const timer = setInterval(() => {
-        countdown.value--
-        if (countdown.value <= 0) {
-          clearInterval(timer)
-        }
-      }, 1000)
+      captchaId.value = res.data.captchaId
+      captchaImage.value = res.data.captchaImage
+      form.captchaId = res.data.captchaId
     }
   } catch (error) {
     console.error(error)
-  } finally {
-    codeLoading.value = false
   }
 }
 
@@ -75,6 +65,9 @@ const handleLogin = async () => {
       router.push('/chat')
     }
   } catch (error) {
+    // 登录失败刷新验证码
+    refreshCaptcha()
+    form.captchaAnswer = ''
     console.error(error)
   } finally {
     loading.value = false
@@ -153,6 +146,9 @@ const showText = ref(false)
 onMounted(() => {
   particles.value = createParticles()
   animateParticles()
+  
+  // 获取验证码
+  refreshCaptcha()
   
   setTimeout(() => {
     showText.value = true
@@ -261,24 +257,19 @@ onUnmounted(() => {
             />
           </el-form-item>
           
-          <el-form-item prop="verifyCode">
-            <div class="code-input">
+          <el-form-item prop="captchaAnswer">
+            <div class="captcha-input">
               <el-input
-                v-model="form.verifyCode"
-                placeholder="请输入验证码"
+                v-model="form.captchaAnswer"
+                placeholder="请输入计算结果"
                 prefix-icon="Key"
                 size="large"
-                maxlength="6"
+                maxlength="10"
               />
-              <el-button
-                type="primary"
-                size="large"
-                :loading="codeLoading"
-                :disabled="countdown > 0"
-                @click="handleSendCode"
-              >
-                {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-              </el-button>
+              <div class="captcha-image" @click="refreshCaptcha">
+                <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
+                <span v-else>加载中...</span>
+              </div>
             </div>
           </el-form-item>
           
@@ -711,14 +702,43 @@ onUnmounted(() => {
   box-shadow: 0 0 0 2px rgba(201, 169, 98, 0.2);
 }
 
-.code-input {
+.captcha-input {
   display: flex;
   gap: var(--spacing-sm);
   width: 100%;
 }
 
-.code-input .el-input {
+.captcha-input .el-input {
   flex: 1;
+}
+
+.captcha-image {
+  width: 120px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  transition: all 0.3s ease;
+}
+
+.captcha-image:hover {
+  border-color: var(--color-primary);
+}
+
+.captcha-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.captcha-image span {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .login-btn {

@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -59,9 +60,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private static final String EMAIL_CACHE_PREFIX = "email:code:";
 
     /**
-     * 发送邮箱验证码
+     * 发送邮箱验证码（异步）
      */
     @Override
+    @Async
     public void sendEmailCode(String email) {
         // 生成验证码
         String code = RandomUtil.randomNumbers(codeLength);
@@ -125,12 +127,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void login(UserDTO userDTO) {
-        // 校验验证码
-        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + userDTO.getEmail());
-        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
-            throw new BusinessException("验证码错误或已过期");
-        }
-
         // 查询用户
         User user = getOne(new LambdaQueryWrapper<User>().eq(User::getEmail, userDTO.getEmail()));
         if (user == null) {
@@ -142,7 +138,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException("账号已被禁用");
         }
 
-        // 校验密码（MybatisPlus自动解密）
+        // 校验密码
         if (!userDTO.getPassword().equals(user.getPassword())) {
             throw new BusinessException("密码错误");
         }
@@ -151,10 +147,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         StpUtil.login(user.getId());
         StpUtil.getSession().set("role", user.getRole());
 
-        // 清除验证码
-        caffeineCache.invalidate(EMAIL_CACHE_PREFIX + userDTO.getEmail());
-
         log.info("用户 {} 登录成功, 角色: {}", userDTO.getEmail(), user.getRole());
+    }
+
+    /**
+     * 修改密码
+     */
+    @Override
+    public void changePassword(Long userId, UserDTO userDTO) {
+        // 查询用户
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        // 校验邮件验证码
+        String cacheCode = caffeineCache.getIfPresent(EMAIL_CACHE_PREFIX + user.getEmail());
+        if (cacheCode == null || !cacheCode.equals(userDTO.getVerifyCode())) {
+            throw new BusinessException("验证码错误或已过期");
+        }
+
+        // 更新密码
+        user.setPassword(userDTO.getPassword());
+        updateById(user);
+
+        // 清除验证码
+        caffeineCache.invalidate(EMAIL_CACHE_PREFIX + user.getEmail());
+
+        log.info("用户 {} 修改密码成功", user.getEmail());
     }
 
     /**

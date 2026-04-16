@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 用户操作DTO（注册/登录/更新）
+ * 用户操作DTO（注册/登录/更新/修改密码）
  */
 @Data
 public class UserDTO {
@@ -19,23 +19,23 @@ public class UserDTO {
     private String username;
 
     /**
-     * 邮箱（注册/登录时必填）
+     * 邮箱（注册/登录/发送验证码时必填）
      */
-    @NotBlank(message = "邮箱不能为空", groups = {Register.class, Login.class})
-    @Email(message = "邮箱格式不正确", groups = {Register.class, Login.class, Update.class})
+    @NotBlank(message = "邮箱不能为空", groups = {Register.class, Login.class, SendCode.class})
+    @Email(message = "邮箱格式不正确", groups = {Register.class, Login.class, Update.class, SendCode.class})
     private String email;
 
     /**
-     * 密码（注册/登录时必填）
+     * 密码（注册/登录/修改密码时必填）
      */
-    @NotBlank(message = "密码不能为空", groups = {Register.class, Login.class})
-    @Size(min = 6, max = 20, message = "密码长度6-20位", groups = {Register.class, Login.class, Update.class})
+    @NotBlank(message = "密码不能为空", groups = {Register.class, Login.class, ChangePassword.class})
+    @Size(min = 6, max = 20, message = "密码长度6-20位", groups = {Register.class, Login.class, Update.class, ChangePassword.class})
     private String password;
 
     /**
-     * 验证码（注册/登录时必填）
+     * 邮件验证码（注册/修改密码时必填）
      */
-    @NotBlank(message = "验证码不能为空", groups = {Register.class, Login.class})
+    @NotBlank(message = "验证码不能为空", groups = {Register.class, ChangePassword.class})
     private String verifyCode;
 
     /**
@@ -44,8 +44,22 @@ public class UserDTO {
     @NotBlank(message = "API Key不能为空", groups = Register.class)
     private String apiKey;
 
+    /**
+     * 图片验证码ID（登录/发送邮件验证码时必填）
+     */
+    @NotBlank(message = "请先获取验证码", groups = {Login.class, SendCode.class})
+    private String captchaId;
+
+    /**
+     * 图片验证码答案（登录/发送邮件验证码时必填）
+     */
+    @NotBlank(message = "请输入验证码", groups = {Login.class, SendCode.class})
+    private String captchaAnswer;
+
     // 验证分组接口
     public interface Register {}
     public interface Login {}
     public interface Update {}
+    public interface SendCode {}
+    public interface ChangePassword {}
 }

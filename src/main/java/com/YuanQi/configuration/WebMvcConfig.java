@@ -32,10 +32,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/user/login",
                         "/user/register",
-                        "/user/sendEmailCode",
+                        "/user/send-code",
+                        "/captcha/**",
                         "/file/**",
                         "/error",
-                        "/user/send-code/**",
                         "/message/stream",  // SSE接口在Controller中手动校验
                         "/relay/call"       // API中转调用接口（API Key验证）
                 );

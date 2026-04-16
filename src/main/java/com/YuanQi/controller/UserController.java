@@ -5,7 +5,9 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.UserDTO;
 import com.YuanQi.pojo.vo.OnlineUserVO;
+import com.YuanQi.service.CaptchaService;
 import com.YuanQi.service.UserService;
+import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,13 +26,18 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final CaptchaService captchaService;
 
     /**
-     * 发送邮箱验证码
+     * 发送邮箱验证码（需要图片验证码验证）
      */
     @PostMapping("/send-code")
-    public Result<Void> sendEmailCode(@RequestParam String email) {
-        userService.sendEmailCode(email);
+    public Result<Void> sendEmailCode(@RequestBody @Validated(UserDTO.SendCode.class) UserDTO userDTO) {
+        // 先验证图片验证码
+        if (!captchaService.verifyCaptcha(userDTO.getCaptchaId(), userDTO.getCaptchaAnswer())) {
+            throw new BusinessException("验证码错误");
+        }
+        userService.sendEmailCode(userDTO.getEmail());
         return Result.success();
     }
 
@@ -44,11 +51,26 @@ public class UserController {
     }
 
     /**
-     * 用户登录（Token自动写入Cookie）
+     * 用户登录（图片验证码登录）
      */
     @PostMapping("/login")
     public Result<Void> login(@RequestBody @Validated(UserDTO.Login.class) UserDTO userDTO) {
+        // 验证图片验证码
+        if (!captchaService.verifyCaptcha(userDTO.getCaptchaId(), userDTO.getCaptchaAnswer())) {
+            throw new BusinessException("验证码错误");
+        }
         userService.login(userDTO);
+        return Result.success();
+    }
+
+    /**
+     * 修改密码（需要登录，通过用户ID修改）
+     */
+    @PostMapping("/change-password")
+    public Result<Void> changePassword(@RequestBody @Validated(UserDTO.ChangePassword.class) UserDTO userDTO) {
+        // 从登录态获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+        userService.changePassword(userId, userDTO);
         return Result.success();
     }
 

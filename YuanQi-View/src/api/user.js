@@ -1,19 +1,31 @@
 import request from '@/utils/request'
 
-export function sendCode(email) {
-  return request.post('/api/user/send-code', null, {
-    params: { email }
-  })
+// 获取图片验证码
+export function getCaptcha() {
+  return request.get('/api/captcha/get')
 }
 
+// 发送邮箱验证码（需要图片验证码）
+export function sendCode(data) {
+  return request.post('/api/user/send-code', data)
+}
+
+// 用户注册
 export function register(data) {
   return request.post('/api/user/register', data)
 }
 
+// 用户登录
 export function login(data) {
   return request.post('/api/user/login', data)
 }
 
+// 修改密码
+export function changePassword(data) {
+  return request.post('/api/user/change-password', data)
+}
+
+// 获取当前用户信息
 export function getUserInfo() {
   return request.get('/api/user/info')
 }
