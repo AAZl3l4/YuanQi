@@ -65,7 +65,7 @@ yuanqi:
     secret-key:
   # 缓存配置
   cache:
-    expire-minutes: 5
+    expire-minutes: 0
     max-size: 10000
   # 邮箱验证码配置
   email:

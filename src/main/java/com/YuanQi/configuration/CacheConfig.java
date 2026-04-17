@@ -21,13 +21,15 @@ public class CacheConfig {
     private Long maxSize;
 
     /**
-     * 验证码缓存
+     * 缓存（知识库加载标记，不过期）
      */
     @Bean
     public Cache<String, String> caffeineCache() {
-        return Caffeine.newBuilder()
-                .expireAfterWrite(expireMinutes, TimeUnit.MINUTES)
-                .maximumSize(maxSize)
-                .build();
+        Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                .maximumSize(maxSize);
+        if (expireMinutes != null && expireMinutes > 0) {
+            builder.expireAfterWrite(expireMinutes, TimeUnit.MINUTES);
+        }
+        return builder.build();
     }
 }

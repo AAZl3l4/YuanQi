@@ -697,7 +697,7 @@ onMounted(() => {
             <el-icon><InfoFilled /></el-icon>
             <span>外部调用示例</span>
           </div>
-          <pre class="code-block">curl -X POST http://47.105.51.84:8080/relay/call \
+          <pre class="code-block">curl -X POST http://47.105.51.84/api/relay/call \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{"message": "你好"}'</pre>
