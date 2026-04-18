@@ -281,6 +281,10 @@ onMounted(() => {
               <el-icon><Collection /></el-icon>
               KB:{{ log.knowledgeBaseId }}
             </span>
+            <span class="web-tag" v-if="log.enableWebSearch">
+              <el-icon><Search /></el-icon>
+              联网
+            </span>
             <span class="model-tag" v-if="log.modelUsed">{{ log.modelUsed }}</span>
           </div>
         </div>
@@ -667,6 +671,21 @@ onMounted(() => {
 }
 
 .kb-tag .el-icon {
+  font-size: 11px;
+}
+
+.web-tag {
+  font-size: 11px;
+  color: var(--color-success);
+  background: var(--color-success-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.web-tag .el-icon {
   font-size: 11px;
 }
 

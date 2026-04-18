@@ -144,7 +144,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             // 保存调用记录
             Long usedKnowledgeBaseId = (Boolean.TRUE.equals(chatDTO.getUseKnowledgeBase()) && key.getKnowledgeBaseId() != null)
                     ? key.getKnowledgeBaseId() : null;
-            saveLog(key, config, sender, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens, usedKnowledgeBaseId);
+            saveLog(key, config, sender, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens, usedKnowledgeBaseId, enableWebSearch);
 
             return response;
         } catch (Exception e) {
@@ -246,13 +246,14 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     /**
      * 保存调用记录
      */
-    private void saveLog(ApiKey key, ApiRelayConfig config, String sender, String inputMessage, String imageUrl, String outputMessage, String model, int inputTokens, int outputTokens, Long knowledgeBaseId) {
+    private void saveLog(ApiKey key, ApiRelayConfig config, String sender, String inputMessage, String imageUrl, String outputMessage, String model, int inputTokens, int outputTokens, Long knowledgeBaseId, Boolean enableWebSearch) {
         ApiRelayLog log = new ApiRelayLog();
         log.setUserId(key.getUserId());
         log.setApiKeyId(key.getId());
         log.setConfigId(config.getId());
         log.setSender(sender);
         log.setKnowledgeBaseId(knowledgeBaseId);
+        log.setEnableWebSearch(Boolean.TRUE.equals(enableWebSearch) ? 1 : 0);
         log.setInputMessage(inputMessage);
         log.setImageUrl(StringUtils.isNotBlank(imageUrl) ? imageUrl : null);
         log.setOutputMessage(outputMessage);

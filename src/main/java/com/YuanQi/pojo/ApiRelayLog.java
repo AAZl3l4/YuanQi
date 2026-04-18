@@ -44,6 +44,12 @@ public class ApiRelayLog extends BaseEntity {
     private Long knowledgeBaseId;
 
     /**
+     * 是否启用联网搜索
+     */
+    @TableField("enable_web_search")
+    private Integer enableWebSearch;
+
+    /**
      * 输入消息
      */
     @TableField("input_message")

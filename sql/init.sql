@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS api_relay_log
     api_key_id     BIGINT   NOT NULL COMMENT 'API Key ID',
     config_id      BIGINT   NOT NULL COMMENT '配置ID',
     knowledge_base_id BIGINT   DEFAULT NULL COMMENT '使用的知识库ID',
+    enable_web_search TINYINT DEFAULT 0 COMMENT '是否启用联网搜索：0-否 1-是',
     sender         VARCHAR(100)     DEFAULT NULL COMMENT '发送者标识',
     input_message  TEXT     NOT NULL COMMENT '输入消息',
     image_url      VARCHAR(500)      DEFAULT NULL COMMENT '图片URL',
