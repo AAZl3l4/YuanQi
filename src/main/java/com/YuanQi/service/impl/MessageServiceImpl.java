@@ -286,7 +286,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         // 注入当前时间到系统提示词中
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E", CHINA));
-        systemPrompt = systemPrompt + "\n\n【重要】当前时间：" + currentTime + "。请直接使用这个时间回答，不要说'2023年'或'不知道'。";
+        systemPrompt = systemPrompt + "\n\n【重要】当前时间：" + currentTime + "。请直接使用这个时间回答，不要说'2023年'或'无法提供'或'不知道'。";
 
         messages.add(new SystemMessage(systemPrompt));
 
