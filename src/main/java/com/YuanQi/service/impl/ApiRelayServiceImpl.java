@@ -176,8 +176,8 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         messages.add(new SystemMessage(SYSTEM_PROMPT));
 
         // 注入当前时间
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E", CHINA));
-        messages.add(new SystemMessage("【重要】现在的时间是：" + currentTime + "。如果用户询问时间相关问题，请直接使用这个时间回答，不要说你不知道时间。"));
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
+        messages.add(new SystemMessage("当前时间：" + currentTime));
 
         // 人设/风格提示词
         if (personaPrompt != null && !personaPrompt.isEmpty()) {
