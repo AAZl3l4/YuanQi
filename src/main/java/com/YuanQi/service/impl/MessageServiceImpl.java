@@ -286,10 +286,6 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         messages.add(new SystemMessage(systemPrompt));
 
-        // 注入当前时间
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
-        messages.add(new SystemMessage("当前时间：" + currentTime));
-
         // 生成应用时追加前端开发专家提示词
         if (Boolean.TRUE.equals(generateApp)) {
             messages.add(new SystemMessage("[系统提示]你是一个前端开发专家。用户会描述需求，你需要生成一个完整的、单文件的HTML代码。代码用```html代码块包裹"));
@@ -327,6 +323,10 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         if (enabledTools != null && !enabledTools.isEmpty()) {
             messages.add(new UserMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据"));
         }
+
+        // 注入当前时间
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
+        messages.add(new SystemMessage("[系统提示]当前时间：" + currentTime));
 
         // 根据是否带图构建当前消息
         if (imageUrl != null && !imageUrl.isEmpty()) {

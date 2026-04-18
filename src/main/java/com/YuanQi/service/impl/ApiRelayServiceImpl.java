@@ -77,7 +77,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
 
         // 验证API Key
         ApiKey key = apiKeyService.validateAndGet(apiKey);
-        
+
         // 获取绑定的配置
         ApiRelayConfig config = apiRelayConfigService.getById(key.getConfigId());
         if (config == null) {
@@ -91,8 +91,8 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         }
 
         // 根据是否带图选择模型
-        String model = (imageUrl != null && !imageUrl.isEmpty()) 
-                ? user.getChatVisionModel() 
+        String model = (imageUrl != null && !imageUrl.isEmpty())
+                ? user.getChatVisionModel()
                 : user.getChatModel();
 
         List<ApiRelayLog> historyLogs = null;
@@ -130,14 +130,14 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             int estimatedOutputTokens = TokenUtil.estimateTokens(response);
 
             // 保存调用记录
-            Long usedKnowledgeBaseId = (Boolean.TRUE.equals(chatDTO.getUseKnowledgeBase()) && key.getKnowledgeBaseId() != null) 
+            Long usedKnowledgeBaseId = (Boolean.TRUE.equals(chatDTO.getUseKnowledgeBase()) && key.getKnowledgeBaseId() != null)
                     ? key.getKnowledgeBaseId() : null;
             saveLog(key, config, sender, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens, usedKnowledgeBaseId);
 
             return response;
         } catch (Exception e) {
-                log.error("AI调用失败", e);
-                throw new RuntimeException("AI调用失败: " + e.getMessage());
+            log.error("AI调用失败", e);
+            throw new RuntimeException("AI调用失败: " + e.getMessage());
         }
     }
 
@@ -148,7 +148,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         if (contextRounds == null || contextRounds <= 0) {
             return new ArrayList<>();
         }
-        
+
         LambdaQueryWrapper<ApiRelayLog> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ApiRelayLog::getUserId, userId)
                 .eq(ApiRelayLog::getConfigId, configId)
@@ -159,10 +159,10 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         } else {
             queryWrapper.isNull(ApiRelayLog::getSender);
         }
-        
+
         queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
         queryWrapper.last("LIMIT " + contextRounds);
-        
+
         return list(queryWrapper);
     }
 
@@ -174,10 +174,6 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
 
         // 系统提示词
         messages.add(new SystemMessage(SYSTEM_PROMPT));
-
-        // 注入当前时间
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
-        messages.add(new SystemMessage("当前时间：" + currentTime));
 
         // 人设/风格提示词
         if (personaPrompt != null && !personaPrompt.isEmpty()) {
@@ -193,18 +189,22 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         if (historyLogs != null && !historyLogs.isEmpty()) {
             List<ApiRelayLog> orderedLogs = new ArrayList<>(historyLogs);
             Collections.reverse(orderedLogs);
-            
+
             for (ApiRelayLog log : orderedLogs) {
-                        // 添加历史用户消息
-                        if (StringUtils.isNotBlank(log.getInputMessage())) {
-                                messages.add(new UserMessage(log.getInputMessage()));
-                        }
-                        // 添加历史AI回复
-                        if (StringUtils.isNotBlank(log.getOutputMessage())) {
-                                messages.add(new AssistantMessage(log.getOutputMessage()));
-                        }
+                // 添加历史用户消息
+                if (StringUtils.isNotBlank(log.getInputMessage())) {
+                    messages.add(new UserMessage(log.getInputMessage()));
                 }
+                // 添加历史AI回复
+                if (StringUtils.isNotBlank(log.getOutputMessage())) {
+                    messages.add(new AssistantMessage(log.getOutputMessage()));
+                }
+            }
         }
+
+        // 注入当前时间
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
+        messages.add(new SystemMessage("[系统提示]当前时间：" + currentTime));
 
         // 当前用户消息
         if (imageUrl != null && !imageUrl.isEmpty()) {
