@@ -7,6 +7,10 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -122,6 +127,23 @@ public class McpTools {
     @Tool(description = "联网搜索实时信息。当用户询问以下类型问题时必须调用此工具：1.最新新闻、热点事件 2.实时数据 3.近期发生的事情 4.你不确定或不知道的信息 5.需要联网才能回答的问题")
     public String webSearch(@ToolParam(description = "搜索关键词，提取用户问题中的核心关键词") String query) {
         log.info("调用联网搜索工具，关键词: {}", query);
+        
+        // 先尝试主API
+        String result = searchWithApi(query);
+
+        // 如果主API失败或无结果，使用必应搜索兜底
+        if (result == null || result.isEmpty()) {
+            log.info("主API无结果，使用必应搜索兜底");
+            result = searchWithBing(query);
+        }
+        
+        return result != null ? result : "搜索失败，请稍后重试";
+    }
+    
+    /**
+     * 使用searchfree.site API搜索
+     */
+    private String searchWithApi(String query) {
         try {
             // 构建请求体
             JSONObject requestBody = new JSONObject();
@@ -138,7 +160,8 @@ public class McpTools {
                     .execute();
             
             if (!response.isOk()) {
-                return "搜索失败，请稍后重试";
+                log.warn("searchfree.site API返回错误: {}", response.getStatus());
+                return null;
             }
             
             JSONObject json = JSONUtil.parseObj(response.body());
@@ -170,14 +193,112 @@ public class McpTools {
                 }
             }
             
-            // 如果没有找到结果
-            if (result.length() == 0) {
-                return "未找到相关信息，建议尝试其他关键词";
-            }
-            return result.toString();
+            return result.length() > 0 ? result.toString() : null;
         } catch (Exception e) {
-            log.error("联网搜索失败", e);
-            return "搜索失败: " + e.getMessage();
+            log.warn("searchfree.site API搜索失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String searchWithBing(String query) {
+        try {
+            // 1. 编码关键词
+            String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+
+            // 2. 构建必应搜索URL（国内版）
+            String url = String.format(
+                    "https://cn.bing.com/search?q=%s&count=10&setmkt=zh-CN&setlang=zh",
+                    encodedQuery
+            );
+
+            // 3. 发送请求（模拟真实浏览器）
+            HttpResponse response = HttpRequest.get(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                    .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                    .header("Referer", "https://cn.bing.com/")
+                    .header("Connection", "keep-alive")
+                    .timeout(10000)  // 10秒超时
+                    .execute();
+
+            // 4. 检查响应
+            if (response.getStatus() != 200) {
+                log.info("搜索失败，HTTP状态码: {}", response.getStatus());
+                return String.format("搜索失败，HTTP状态码: %d", response.getStatus());
+            }
+
+            String html = response.body();
+
+            // 5. 解析HTML（使用Jsoup）
+            Document doc = Jsoup.parse(html);
+
+            // 必应搜索结果主要在 .b_algo 中
+            Elements results = doc.select("li.b_algo");
+
+            if (results.isEmpty()) {
+                // 备选选择器（必应偶尔改版）
+                results = doc.select(".b_caption, .b_algo");
+                if (results.isEmpty()) {
+                    log.info("未找到搜索结果（可能被反爬或页面结构变更）");
+                    return "未找到搜索结果";
+                }
+            }
+
+            // 6. 提取结果
+            List<JSONObject> resultList = new ArrayList<>();
+            int count = 0;
+
+            for (Element result : results) {
+                if (count >= 5) break;  // 只取前5条
+
+                // 标题
+                Element titleElem = result.selectFirst("h2 a, .b_algoheader a");
+                String title = titleElem != null ? titleElem.text() : "无标题";
+
+                // 链接
+                String link = titleElem != null ? titleElem.attr("href") : "";
+                // 处理必应跳转链接
+                if (link.startsWith("/")) {
+                    link = "https://cn.bing.com" + link;
+                }
+
+                // 摘要
+                Element snippetElem = result.selectFirst(".b_caption p, p, .b_algoSlug");
+                String snippet = snippetElem != null ? snippetElem.text() : "";
+                // 清理摘要中的广告标记
+                snippet = snippet.replaceAll("广告", "").trim();
+
+                // 跳过广告结果（通常有特定标记）
+                if (result.select(".b_adSlug, .adSlug").isEmpty() && !title.isEmpty()) {
+                    JSONObject item = new JSONObject();
+                    item.set("title", title);
+                    item.set("url", link);
+                    item.set("snippet", snippet);
+                    resultList.add(item);
+                    count++;
+                }
+            }
+
+            // 7. 格式化输出（给LLM用的上下文）
+            if (resultList.isEmpty()) {
+                log.info("未找到有效搜索结果");
+                return "未找到有效搜索结果";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("【必应搜索：%s】\n\n", query));
+
+            for (int i = 0; i < resultList.size(); i++) {
+                JSONObject item = resultList.get(i);
+                sb.append(String.format("%d. %s\n", i + 1, item.getStr("title")));
+                sb.append(String.format("   %s\n", item.getStr("snippet")));
+                sb.append(String.format("   来源：%s\n\n", item.getStr("url")));
+            }
+            log.debug("成功,{}",sb.toString());
+            return sb.toString();
+
+        } catch (Exception e) {
+            return String.format("搜索异常: %s", e.getMessage());
         }
     }
 }
