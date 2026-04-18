@@ -172,8 +172,10 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs, String ragContext) {
         List<Message> messages = new ArrayList<>();
 
-        // 系统提示词
-        messages.add(new SystemMessage(SYSTEM_PROMPT));
+        // 系统提示词（注入当前时间）
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E", CHINA));
+        String systemPrompt = SYSTEM_PROMPT + "\n\n【重要】当前时间：" + currentTime + "。请直接使用这个时间回答，不要说'2023年'或'不知道'。";
+        messages.add(new SystemMessage(systemPrompt));
 
         // 人设/风格提示词
         if (personaPrompt != null && !personaPrompt.isEmpty()) {
@@ -201,10 +203,6 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
                 }
             }
         }
-
-        // 注入当前时间
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
-        messages.add(new SystemMessage("[系统提示]当前时间：" + currentTime));
 
         // 当前用户消息
         if (imageUrl != null && !imageUrl.isEmpty()) {

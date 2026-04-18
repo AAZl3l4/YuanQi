@@ -284,6 +284,10 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     "支持文字对话、图文理解、知识库检索、MCP调用等多种功能。请用简洁友好的方式回答用户问题。";
         }
 
+        // 注入当前时间到系统提示词中
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E", CHINA));
+        systemPrompt = systemPrompt + "\n\n【重要】当前时间：" + currentTime + "。请直接使用这个时间回答，不要说'2023年'或'不知道'。";
+
         messages.add(new SystemMessage(systemPrompt));
 
         // 生成应用时追加前端开发专家提示词
@@ -323,10 +327,6 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         if (enabledTools != null && !enabledTools.isEmpty()) {
             messages.add(new UserMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据"));
         }
-
-        // 注入当前时间
-        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
-        messages.add(new SystemMessage("[系统提示]当前时间：" + currentTime));
 
         // 根据是否带图构建当前消息
         if (imageUrl != null && !imageUrl.isEmpty()) {
