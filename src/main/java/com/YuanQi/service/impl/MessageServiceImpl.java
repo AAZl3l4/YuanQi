@@ -49,10 +49,14 @@ import reactor.core.publisher.Flux;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import static java.util.Locale.CHINA;
 
 /**
  * 消息服务实现
@@ -276,6 +280,10 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
 
         messages.add(new SystemMessage(systemPrompt));
+
+        // 注入当前时间
+        String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss E", CHINA));
+        messages.add(new SystemMessage("当前时间：" + currentTime));
 
         // 生成应用时追加前端开发专家提示词
         if (Boolean.TRUE.equals(generateApp)) {
