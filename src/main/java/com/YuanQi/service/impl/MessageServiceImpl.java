@@ -237,11 +237,16 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                         },
                         () -> { // 流完成时执行
                             // 估算输出Token（AI回复内容）
-                            if (emitterCompleted.get()) return;
                             int estimatedOutputTokens = TokenUtil.estimateTokens(fullResponse.toString());
                             log.debug("估算输出Token: {}", estimatedOutputTokens);
-                            // 保存AI回复（携带Token统计）
+                            // 保存AI回复（即使前端断开也保存）
                             saveAssistantMessage(sessionId, fullResponse.toString(), model, estimatedInputTokens, estimatedOutputTokens);
+                            
+                            // 前端已断开，跳过发送
+                            if (emitterCompleted.get()) {
+                                log.info("前端已断开，AI回复已保存，sessionId: {}", sessionId);
+                                return;
+                            }
                             try {
                                 emitter.send(SseEmitter.event().name("complete").data("done", MediaType.TEXT_PLAIN));
                                 emitter.complete();
