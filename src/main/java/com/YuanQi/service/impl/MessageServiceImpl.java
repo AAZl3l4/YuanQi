@@ -184,7 +184,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         List<ToolCallback> tools = getTools(enabledTools);
 
         SseEmitter emitter = new SseEmitter(300000L);
-        log.info("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}, agentId={}",
+        log.debug("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}, agentId={}",
                 sessionId, model, imageUrl != null && !imageUrl.isEmpty(), documentUrl != null && !documentUrl.isEmpty(), knowledgeBaseId != null, enabledTools != null && !enabledTools.isEmpty(), agent != null);
 
         CompletableFuture.runAsync(() -> {
@@ -244,7 +244,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                             
                             // 前端已断开，跳过发送
                             if (emitterCompleted.get()) {
-                                log.info("前端已断开，AI回复已保存，sessionId: {}", sessionId);
+                                log.debug("前端已断开，AI回复已保存，sessionId: {}", sessionId);
                                 return;
                             }
                             try {
@@ -325,7 +325,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         // 强调使用MCP工具
         if (enabledTools != null && !enabledTools.isEmpty()) {
-            messages.add(new UserMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据"));
+            messages.add(new SystemMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据，不要说'无法提供'或'不知道'或'请稍等'"));
         }
 
         // 根据是否带图构建当前消息
@@ -371,7 +371,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             if (!ragContext.isEmpty()) {
                 context.append(ragContext);
             }
-            log.info("知识库RAG上下文构建完成，知识库ID: {}", knowledgeBaseId);
+            log.debug("知识库RAG上下文构建完成，知识库ID: {}", knowledgeBaseId);
         }
 
         // 携带文档聊天
@@ -384,7 +384,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     // 小文档：直接注入上下文
                     String fullText = documentParseService.extractText(documents);
                     context.append("【用户提供的文档内容】\n").append(fullText).append("\n\n");
-                    log.info("小文档直接注入上下文，分块数: {}", documents.size());
+                    log.debug("小文档直接注入上下文，分块数: {}", documents.size());
                 } else {
                     // 大文档：临时RAG检索，生成临时隔离ID
                     Long tempDocId = System.currentTimeMillis() * 10000 + (long)(Math.random() * 10000);
@@ -396,7 +396,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                     }
                     // 删除临时向量数据
                     ragService.deleteDocuments(chunkIds);
-                    log.info("大文档临时RAG检索完成，临时ID: {}, 分块数: {}", tempDocId, chunkIds.size());
+                    log.debug("大文档临时RAG检索完成，临时ID: {}, 分块数: {}", tempDocId, chunkIds.size());
                 }
             } catch (Exception e) {
                 log.error("文档处理失败: {}", e.getMessage());
@@ -448,7 +448,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         assistantMessage.setInputTokens(inputTokens);
         assistantMessage.setOutputTokens(outputTokens);
         chatMessageMapper.insert(assistantMessage);
-        log.info("保存AI回复: sessionId={}, length={}, inputTokens={}, outputTokens={}",
+        log.debug("保存AI回复: sessionId={}, length={}, inputTokens={}, outputTokens={}",
                 sessionId, content.length(), inputTokens, outputTokens);
     }
 
@@ -465,7 +465,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         String apiKey = user.getApiKey();
         String model = user.getImageModel();
-        log.info("开始生成图片: model={}, prompt={}", model, imageDTO.getPrompt());
+        log.debug("开始生成图片: model={}, prompt={}", model, imageDTO.getPrompt());
 
         // 创建ImageModel
         ImageModel imageModel = springAiConfig.createImageModel(apiKey);
@@ -501,7 +501,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
             generatedContentMapper.insert(content);
             throw new BusinessException("图片生成失败，请重试");
         }else{
-            log.info("图片生成成功: url={}", imageUrl);
+            log.debug("图片生成成功: url={}", imageUrl);
             // 保存生成记录到数据库
             content.setStatus(1);
             generatedContentMapper.insert(content);
@@ -522,7 +522,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         String apiKey = user.getApiKey();
         String model = user.getVideoModel();
-        log.info("提交视频生成任务: model={}, prompt={}", model, videoDTO.getPrompt());
+        log.debug("提交视频生成任务: model={}, prompt={}", model, videoDTO.getPrompt());
 
         // Spring Ai 暂时还不支持视频生成 直接调用智谱API生成视频
         // 构建请求体
@@ -549,7 +549,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         JSONObject json = JSONUtil.parseObj(response);
         String taskId = json.getStr("id");
-        log.info("视频任务提交成功: taskId={}", taskId);
+        log.debug("视频任务提交成功: taskId={}", taskId);
 
         // 保存生成记录到数据库（状态：处理中）
         GeneratedContent content = new GeneratedContent();
@@ -576,7 +576,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         }
 
         String apiKey = user.getApiKey();
-        log.info("查询视频任务: taskId={}", taskId);
+        log.debug("查询视频任务: taskId={}", taskId);
 
         // 调用智谱查询API
         String response = HttpRequest.get(zhipuBaseUrl + "/v4/async-result/" + taskId)
@@ -643,7 +643,7 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
                 title = title.substring(0, 20);
             }
 
-            log.info("生成会话标题: {}", title);
+            log.debug("生成会话标题: {}", title);
             return title.isEmpty() ? "新会话" : title;
         } catch (Exception e) {
             log.warn("生成会话标题失败，使用默认标题: {}", e.getMessage());

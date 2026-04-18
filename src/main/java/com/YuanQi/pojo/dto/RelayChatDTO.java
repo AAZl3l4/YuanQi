@@ -39,4 +39,10 @@ public class RelayChatDTO {
      * 默认false（不使用）
      */
     private Boolean useKnowledgeBase = false;
+
+    /**
+     * 是否启用联网搜索
+     * 默认false（不启用）
+     */
+    private Boolean enableWebSearch = false;
 }

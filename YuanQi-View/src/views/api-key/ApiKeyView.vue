@@ -42,7 +42,8 @@ const testForm = ref({
   imageUrl: '',
   sender: '',
   contextRounds: 0,
-  useKnowledgeBase: false
+  useKnowledgeBase: false,
+  enableWebSearch: false
 })
 const testLoading = ref(false)
 const testResponse = ref('')
@@ -204,7 +205,8 @@ const openTestDialog = (apiKey) => {
     imageUrl: '',
     sender: '',
     contextRounds: 0,
-    useKnowledgeBase: false
+    useKnowledgeBase: false,
+    enableWebSearch: false
   }
   testResponse.value = ''
   testDialogVisible.value = true
@@ -256,7 +258,8 @@ const handleTestCall = async () => {
         imageUrl: testForm.value.imageUrl || undefined,
         sender: testForm.value.sender || undefined,
         contextRounds: testForm.value.contextRounds || undefined,
-        useKnowledgeBase: testForm.value.useKnowledgeBase || undefined
+        useKnowledgeBase: testForm.value.useKnowledgeBase || undefined,
+        enableWebSearch: testForm.value.enableWebSearch || undefined
       })
     })
     
@@ -581,7 +584,9 @@ onMounted(() => {
         <div class="context-section">
           <div class="context-row">
             <div class="context-item">
-              <span class="context-label">发送者</span>
+              <el-tooltip content="用于区分不同来源的对话上下文，如QQ号" placement="top">
+                <span class="context-label">发送者</span>
+              </el-tooltip>
               <el-input
                 v-model="testForm.sender"
                 placeholder="如QQ号"
@@ -590,7 +595,9 @@ onMounted(() => {
               />
             </div>
             <div class="context-item">
-              <span class="context-label">上下文轮数</span>
+              <el-tooltip content="多轮对话时保留的历史消息轮数" placement="top">
+                <span class="context-label">上下文轮数</span>
+              </el-tooltip>
               <el-input-number
                 v-model="testForm.contextRounds"
                 :min="0"
@@ -600,14 +607,24 @@ onMounted(() => {
               />
             </div>
             <div class="context-item">
-              <span class="context-label">使用知识库</span>
+              <el-tooltip content="仅当API Key绑定了知识库时生效" placement="top">
+                <span class="context-label">使用知识库</span>
+              </el-tooltip>
               <el-switch
                 v-model="testForm.useKnowledgeBase"
                 class="context-switch"
               />
             </div>
+            <div class="context-item">
+              <el-tooltip content="启用后可获取实时新闻、热点等信息。注意：联网搜索可能导致人设效果减弱" placement="top">
+                <span class="context-label">联网搜索</span>
+              </el-tooltip>
+              <el-switch
+                v-model="testForm.enableWebSearch"
+                class="context-switch"
+              />
+            </div>
           </div>
-          <div class="context-hint">发送者和上下文轮数用于多轮对话，知识库开关仅当API Key绑定了知识库时生效</div>
         </div>
         
         <div class="input-section">

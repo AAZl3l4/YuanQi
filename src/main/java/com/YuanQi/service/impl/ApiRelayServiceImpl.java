@@ -1,5 +1,6 @@
 package com.YuanQi.service.impl;
 
+import com.YuanQi.configuration.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ApiRelayLogMapper;
 import com.YuanQi.pojo.*;
@@ -20,6 +21,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +48,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     private final KnowledgeBaseService knowledgeBaseService;
     private final RagService ragService;
     private final SpringAiConfig springAiConfig;
+    private final McpTools mcpTools;
 
     /**
      * 系统提示词（聊天场景）
@@ -69,6 +72,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         String imageUrl = chatDTO.getImageUrl();
         String sender = chatDTO.getSender();
         Integer contextRounds = chatDTO.getContextRounds();
+        Boolean enableWebSearch = chatDTO.getEnableWebSearch();
 
         // 校验：消息内容和图片至少填一项
         if ((message == null || message.isEmpty()) && (imageUrl == null || imageUrl.isEmpty())) {
@@ -111,8 +115,15 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         }
 
         // 构建消息（包含历史上下文和知识库上下文）
-        List<Message> messages = buildMessagesWithHistory(config.getPersonaPrompt(), message, imageUrl, historyLogs, ragContext);
+        List<Message> messages = buildMessagesWithHistory(config.getPersonaPrompt(), message, imageUrl, historyLogs, ragContext, enableWebSearch);
 
+        // 获取联网搜索工具（如果启用）
+        List<ToolCallback> tools = new ArrayList<>();
+        if (Boolean.TRUE.equals(enableWebSearch)) {
+            tools = mcpTools.getAllToolCallbacks().stream()
+                    .filter(t -> t.getToolDefinition().name().equals("webSearch"))
+                    .toList();
+        }
         // 估算输入Token
         int estimatedInputTokens = TokenUtil.estimateTokens(messages.stream().map(Message::getText).toList());
 
@@ -123,6 +134,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             // 同步调用
             String response = chatClient.prompt()
                     .messages(messages)
+                    .toolCallbacks(tools)
                     .call()
                     .content();
 
@@ -169,7 +181,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
     /**
      * 构建消息（包含历史上下文和知识库上下文）
      */
-    private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs, String ragContext) {
+    private List<Message> buildMessagesWithHistory(String personaPrompt, String message, String imageUrl, List<ApiRelayLog> historyLogs, String ragContext, Boolean enableWebSearch) {
         List<Message> messages = new ArrayList<>();
 
         // 系统提示词（注入当前时间）
@@ -202,6 +214,11 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
                     messages.add(new AssistantMessage(log.getOutputMessage()));
                 }
             }
+        }
+
+        // 强调使用MCP工具
+        if (Boolean.TRUE.equals(enableWebSearch)) {
+            messages.add(new SystemMessage("[系统提示]当用户的问题需要查询外部信息时，请主动使用MCP工具获取数据，不要说'无法提供'或'不知道'或'请稍等'"));
         }
 
         // 当前用户消息

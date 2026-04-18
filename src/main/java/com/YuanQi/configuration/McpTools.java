@@ -57,7 +57,7 @@ public class McpTools {
      */
     @Tool(description = "查询指定城市的实时天气信息。当用户询问天气、气温、下雨、穿什么衣服等与天气相关的问题时调用此工具。")
     public String getWeather(@ToolParam(description = "城市名称，如：北京、上海、广州") String city) {
-        log.info("调用天气查询工具，城市: {}", city);
+        log.debug("调用天气查询工具，城市: {}", city);
         try {
             String url = "https://uapis.cn/api/v1/misc/weather?city=" + 
                     URLEncoder.encode(city, StandardCharsets.UTF_8);
@@ -99,7 +99,7 @@ public class McpTools {
      */
     @Tool(description = "获取随机一言或随机诗句。当用户想要一句励志的话、名言警句、诗词、或者想看点有意思的句子时调用此工具。")
     public String getRandomQuote() {
-        log.info("调用随机一言工具");
+        log.debug("调用随机一言工具");
         try {
             HttpResponse response = HttpRequest.get("https://v1.hitokoto.cn/?c=i")
                     .timeout(10000)
@@ -126,7 +126,7 @@ public class McpTools {
      */
     @Tool(description = "联网搜索实时信息。当用户询问以下类型问题时必须调用此工具：1.最新新闻、热点事件 2.实时数据 3.近期发生的事情 4.你不确定或不知道的信息 5.需要联网才能回答的问题")
     public String webSearch(@ToolParam(description = "搜索关键词，提取用户问题中的核心关键词") String query) {
-        log.info("调用联网搜索工具，关键词: {}", query);
+        log.debug("调用联网搜索工具，关键词: {}", query);
         
         // 先尝试主API
         String result = searchWithApi(query);
