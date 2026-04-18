@@ -145,7 +145,8 @@ CREATE TABLE IF NOT EXISTS mcp_tool
 
 -- MCP工具初始数据
 INSERT INTO mcp_tool (name, description, enabled, sort_order)
-VALUES ('getWeather', '查询指定城市的天气信息', 1, 1),
+VALUES ('webSearch', '联网搜索实时信息', 1, 1),
+       ('getWeather', '查询指定城市的天气信息', 1, 3),
        ('getRandomQuote', '获取随机一言', 1, 2);
 
 -- 智能体表
