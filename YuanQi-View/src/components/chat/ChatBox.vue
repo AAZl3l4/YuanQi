@@ -19,6 +19,7 @@ const messagesContainer = ref(null)
 const streamingContent = ref('')
 const isStreaming = ref(false)
 let abortController = null
+let skipNextWatch = false
 
 const currentSessionId = computed(() => {
   return props.sessionId || sessionStore.currentSession?.sessionId
@@ -64,8 +65,18 @@ const loadMessages = async (sid) => {
 }
 
 const handleSend = async (data) => {
-  const sid = currentSessionId.value
-  if (!sid) return
+  let sid = currentSessionId.value
+  
+  // 如果没有会话，先创建一个
+  if (!sid) {
+    skipNextWatch = true
+    const newSession = await sessionStore.createNewSession()
+    if (!newSession) {
+      skipNextWatch = false
+      return
+    }
+    sid = newSession.sessionId
+  }
   
   messages.value.push({
     role: 'user',
@@ -152,6 +163,10 @@ const handleStop = () => {
 watch(
   () => currentSessionId.value,
   (newId, oldId) => {
+    if (skipNextWatch) {
+      skipNextWatch = false
+      return
+    }
     if (newId && newId !== oldId) {
       loadMessages(newId)
     }
