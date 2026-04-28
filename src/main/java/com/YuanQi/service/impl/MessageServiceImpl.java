@@ -549,6 +549,15 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
 
         JSONObject json = JSONUtil.parseObj(response);
         String taskId = json.getStr("id");
+
+        // 判断API是否返回错误
+        if (taskId == null || taskId.isEmpty()) {
+            String errorMsg = json.getStr("error.message",
+                    json.getStr("message", "视频任务提交失败，请检查API Key或模型配置"));
+            log.error("视频任务提交失败: response={}", response);
+            throw new BusinessException(errorMsg);
+        }
+
         log.debug("视频任务提交成功: taskId={}", taskId);
 
         // 保存生成记录到数据库（状态：处理中）
