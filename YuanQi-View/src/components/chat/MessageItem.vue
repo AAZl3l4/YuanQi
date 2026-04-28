@@ -1,5 +1,5 @@
 <script setup>
-import { computed, inject, onMounted, onUnmounted } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue'
 import { renderMarkdown } from '@/utils/markdown'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -15,7 +15,20 @@ const props = defineProps({
 const userStore = useUserStore()
 
 const isUser = computed(() => props.message.role === 'user')
-const renderedContent = computed(() => renderMarkdown(props.message.content || ''))
+
+// 音乐链接正则：匹配QQ音乐等音频链接（支持<a>标签包裹的链接）
+const musicRegex = /<a[^>]*href="(https?:\/\/[^"]+\.(mp3|m4a|flac|wav)(\?[^"]*)?)"[^>]*>[^<]*<\/a>|(https?:\/\/[^\s`]+\.(mp3|m4a|flac|wav)(\?[^\s`]*)?)/g
+
+const renderedContent = computed(() => {
+  let html = renderMarkdown(props.message.content || '')
+  // 将音频链接替换为播放器HTML
+  html = html.replace(musicRegex, (match, urlFromAnchor, ext1, query1, urlPlain, ext2, query2) => {
+    const url = urlFromAnchor || urlPlain
+    if (!url) return match
+    return `<audio controls class="music-player" src="${url}" style="width:100%;margin:8px 0;"></audio>`
+  })
+  return html
+})
 
 const userAvatar = computed(() => userStore.user?.avatar)
 const userName = computed(() => userStore.user?.username || 'U')
@@ -298,5 +311,18 @@ onUnmounted(() => {
 @keyframes bounce {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
+}
+
+.message-text :deep(.music-player) {
+  width: 100%;
+  height: 40px;
+  margin: 8px 0;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+}
+
+.message-text :deep(.music-player::-webkit-media-controls-panel) {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
 }
 </style>

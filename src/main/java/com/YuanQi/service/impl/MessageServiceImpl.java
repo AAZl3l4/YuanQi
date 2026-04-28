@@ -184,8 +184,8 @@ public class MessageServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessa
         List<ToolCallback> tools = getTools(enabledTools);
 
         SseEmitter emitter = new SseEmitter(300000L);
-        log.debug("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={}, agentId={}",
-                sessionId, model, imageUrl != null && !imageUrl.isEmpty(), documentUrl != null && !documentUrl.isEmpty(), knowledgeBaseId != null, enabledTools != null && !enabledTools.isEmpty(), agent != null);
+        log.debug("开始对话: sessionId={}, model={}, hasImage={}, hasDocument={}, knowledgeBaseId={}, enabledTools={},tools={}, agentId={}",
+                sessionId, model, imageUrl != null && !imageUrl.isEmpty(), documentUrl != null && !documentUrl.isEmpty(), knowledgeBaseId != null, enabledTools != null && !enabledTools.isEmpty(),tools, agent != null);
 
         CompletableFuture.runAsync(() -> {
             try {

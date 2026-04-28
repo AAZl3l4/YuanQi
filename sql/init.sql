@@ -147,7 +147,8 @@ CREATE TABLE IF NOT EXISTS mcp_tool
 INSERT INTO mcp_tool (name, description, enabled, sort_order)
 VALUES ('webSearch', '联网搜索实时信息', 1, 1),
        ('getWeather', '查询指定城市的天气信息', 1, 3),
-       ('getRandomQuote', '获取随机一言', 1, 2);
+       ('getRandomQuote', '获取随机一言', 1, 2),
+       ('searchMusic', '点歌或搜索音乐', 1, 4);
 
 -- 智能体表
 CREATE TABLE IF NOT EXISTS agent

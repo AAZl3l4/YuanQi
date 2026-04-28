@@ -15,16 +15,17 @@ import org.springframework.context.annotation.Primary;
 public class RagConfig {
 
     /**
-     * 配置本地Embedding模型
+     * 不配置本地Embedding模型 使用Spring AI默认的all-MiniLM-L6-v2模型
+     * 首次启动自动下载(默认github 手动new也会github下载 不能自动读取 所以不写bean)
      * 使用Spring AI默认的all-MiniLM-L6-v2模型，首次启动自动下载
      * @return TransformersEmbeddingModel 本地嵌入模型实例
      */
-    @Bean
-    @Primary
-    public EmbeddingModel embeddingModel() {
-        // 不设置资源，使用默认模型 all-MiniLM-L6-v2
-        return new TransformersEmbeddingModel();
-    }
+//    @Bean
+//    @Primary
+//    public EmbeddingModel embeddingModel() {
+//        // 不设置资源，使用默认模型 all-MiniLM-L6-v2
+//        return new TransformersEmbeddingModel();
+//    }
 
     /**
      * 配置向量存储（内存型向量库）

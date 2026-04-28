@@ -301,4 +301,129 @@ public class McpTools {
             return String.format("搜索异常: %s", e.getMessage());
         }
     }
+
+    /**
+     * 点歌/音乐搜索工具
+     */
+    @Tool(description = "点歌或搜索音乐。当用户要求找歌、点歌、听歌、推荐音乐、指定歌名或歌手时调用此工具。支持通过歌名、歌手名、风格等关键词搜索。")
+    public String searchMusic(@ToolParam(description = "搜索关键词，可以是歌名、歌手名或风格描述，如'周杰伦'、'稻香'、'古风歌曲'") String keyword) {
+        log.info("调用音乐搜索工具，关键词: {}", keyword);
+        try {
+            String encodedKeyword = URLEncoder.encode(keyword, StandardCharsets.UTF_8);
+            String searchUrl = "https://api.vkeys.cn/v2/music/tencent?word=" + encodedKeyword;
+
+            HttpResponse response = HttpRequest.get(searchUrl)
+                    .timeout(15000)
+                    .execute();
+
+            if (!response.isOk()) {
+                return "音乐搜索失败，请稍后重试";
+            }
+
+            JSONObject json = JSONUtil.parseObj(response.body());
+            if (json.getInt("code") != 200) {
+                return "音乐搜索失败: " + json.getStr("message");
+            }
+
+            JSONArray data = json.getJSONArray("data");
+            if (data == null || data.isEmpty()) {
+                return "未找到相关歌曲，建议尝试其他关键词";
+            }
+
+            // 遍历所有结果，找到有播放链接的歌曲
+            JSONObject foundSong = null;
+            String playUrl = null;
+            for (int i = 0; i < data.size(); i++) {
+                JSONObject song = data.getJSONObject(i);
+                Long songId = song.getLong("id");
+                String url = getMusicPlayUrl(songId);
+                if (url != null && !url.isEmpty()) {
+                    foundSong = song;
+                    playUrl = url;
+                    break;
+                }
+            }
+
+            // 如果都没找到播放链接，返回第一首的信息
+            if (foundSong == null) {
+                foundSong = data.getJSONObject(0);
+            }
+
+            String songName = foundSong.getStr("song");
+            String singer = foundSong.getStr("singer");
+            String album = foundSong.getStr("album");
+            String cover = foundSong.getStr("cover");
+            String subtitle = foundSong.getStr("subtitle");
+
+            StringBuilder result = new StringBuilder();
+            result.append("🎵 ").append(songName);
+            if (subtitle != null && !subtitle.isEmpty()) {
+                result.append(" (").append(subtitle).append(")");
+            }
+            result.append("\n");
+            result.append("🎤 歌手: ").append(singer).append("\n");
+            result.append("💿 专辑: ").append(album).append("\n");
+            if (cover != null && !cover.isEmpty()) {
+                result.append("🖼️ 封面: ").append(cover).append("\n");
+            }
+            if (playUrl != null && !playUrl.isEmpty()) {
+                result.append("🔗 播放链接: ").append(playUrl).append("\n");
+            }
+
+            // 如果有更多结果，列出前3首
+            if (data.size() > 1) {
+                result.append("\n📋 更多相关歌曲:\n");
+                int count = 0;
+                for (int i = 0; i < data.size() && count < 3; i++) {
+                    JSONObject song = data.getJSONObject(i);
+                    // 跳过已找到的歌曲
+                    if (song.getLong("id").equals(foundSong.getLong("id"))) {
+                        continue;
+                    }
+                    result.append(count + 1).append(". ").append(song.getStr("song"));
+                    result.append(" - ").append(song.getStr("singer"));
+                    if (song.getStr("subtitle") != null && !song.getStr("subtitle").isEmpty()) {
+                        result.append(" (").append(song.getStr("subtitle")).append(")");
+                    }
+                    result.append("\n");
+                    count++;
+                }
+            }
+
+            return result.toString();
+        } catch (Exception e) {
+            log.error("音乐搜索失败", e);
+            return "音乐搜索失败: " + e.getMessage();
+        }
+    }
+
+    /**
+     * 获取音乐播放链接
+     */
+    private String getMusicPlayUrl(Long songId) {
+        try {
+            String url = "https://api.vkeys.cn/v2/music/tencent/geturl?id=" + songId;
+            HttpResponse response = HttpRequest.get(url)
+                    .timeout(15000)
+                    .execute();
+
+            if (!response.isOk()) {
+                return null;
+            }
+
+            JSONObject json = JSONUtil.parseObj(response.body());
+            if (json.getInt("code") != 200) {
+                return null;
+            }
+
+            JSONObject data = json.getJSONObject("data");
+            if (data != null) {
+                return data.getStr("url");
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("获取音乐播放链接失败: {}", e.getMessage());
+            return null;
+        }
+    }
 }
