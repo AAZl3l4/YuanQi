@@ -1499,7 +1499,7 @@ void callbackOnRawMsg(Object msg) {
         boolean isSelfPai = senderUin.equals(targetUin);
         if (isSelfPai && !isReplySelf(scopeKey)) return;
         
-        String reply = callAI("拍一拍", null, senderUin);
+        String reply = callAI("[拍了你一下]", null, senderUin);
         if (isEmpty(reply)) {
             String errorReply = getErrorReply();
             if (isEmpty(errorReply)) return;

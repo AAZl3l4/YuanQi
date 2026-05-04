@@ -1634,7 +1634,7 @@ public void onPaiYiPai(String peerUin, int chatType, String operatorUin) {
 
         if (operatorUin.equals(myUin) && !isReplySelf(scopeKey)) return;
 
-        String reply = callAI("拍一拍", null, operatorUin);
+        String reply = callAI("[拍了你一下]", null, operatorUin);
         if (isEmpty(reply)) {
             String errorReply = getErrorReply();
             if (isEmpty(errorReply)) return;

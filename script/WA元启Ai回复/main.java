@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 String RULES_KEY = "rules";
-String DEFAULT_API_URL = "http://47.105.51.84/api/relay/call";
+String DEFAULT_API_URL = "https://91yq.top/api/relay/call";
 
 final int BG_PANEL = Color.parseColor("#2A2A2A");
 final int BG_CARD = Color.parseColor("#3A3A3A");
@@ -1295,7 +1295,7 @@ void handlePatMessage(Object msgInfoBean) {
         boolean isSelfPai = fromUser.equals(pattedUser);
         if (isSelfPai && !isReplySelf(scopeKey)) return;
 
-        String reply = callAI("拍一拍", null, fromUser);
+        String reply = callAI("[拍了你一下]", null, fromUser);
         if (isEmpty(reply)) {
             String errorReply = getErrorReply();
             if (isEmpty(errorReply)) return;
