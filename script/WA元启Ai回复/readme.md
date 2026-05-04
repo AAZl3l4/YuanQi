@@ -2,7 +2,7 @@
 
 ## 平台信息
 
-- **元启AI平台**：http://47.105.51.84
+- **元启AI平台**：https://91yq.top
 - **QQ交流群**: 883640898（[点击加入 可能会崩 建议搜索群号加入](https://qun.qq.com/universal-share/share?ac=1&authKey=qnKnEk9fixjZc6NNjEFbLB8gwREGPnfUP23AZYxGqdxw0iiRJDH1zrztUG8%2BdbAE&busi_data=eyJncm91cENvZGUiOiI4ODM2NDA4OTgiLCJ0b2tlbiI6IlFXVEgzNFEyd3lJNU5oQzljZG4yQW5BMFBWK2RENHpFUkR6eEZ4TWl5U3Z6ZGRYb3ViK2xPK3Nva1p2Wjl4d2MiLCJ1aW4iOiI2MTEwNTM2In0%3D&data=TWSZoYEaYUAG0Euuz6NeLt9YAZI87UxI56LHHlNDI8SV2DSkuJMGelcmcyrKRq1py2DZVMvYrgt4m6sgjkhLXA&svctype=4&tempid=h5_group_info)）
 - 聊天框输入`/元启`打开脚本配置页面
 - 轻量级免费模型，可安心使用
