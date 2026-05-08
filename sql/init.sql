@@ -226,6 +226,8 @@ CREATE TABLE IF NOT EXISTS api_relay_log
     config_id      BIGINT   NOT NULL COMMENT '配置ID',
     knowledge_base_id BIGINT   DEFAULT NULL COMMENT '使用的知识库ID',
     enable_web_search TINYINT DEFAULT 0 COMMENT '是否启用联网搜索：0-否 1-是',
+    enable_sticker TINYINT DEFAULT 0 COMMENT '是否启用表情包回复：0-否 1-是',
+    sticker_url    VARCHAR(500)      DEFAULT NULL COMMENT '表情包URL',
     sender         VARCHAR(100)     DEFAULT NULL COMMENT '发送者标识',
     input_message  TEXT     NOT NULL COMMENT '输入消息',
     image_url      VARCHAR(500)      DEFAULT NULL COMMENT '图片URL',

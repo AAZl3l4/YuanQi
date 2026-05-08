@@ -50,6 +50,18 @@ public class ApiRelayLog extends BaseEntity {
     private Integer enableWebSearch;
 
     /**
+     * 是否启用表情包回复
+     */
+    @TableField("enable_sticker")
+    private Integer enableSticker;
+
+    /**
+     * 表情包URL
+     */
+    @TableField("sticker_url")
+    private String stickerUrl;
+
+    /**
      * 输入消息
      */
     @TableField("input_message")

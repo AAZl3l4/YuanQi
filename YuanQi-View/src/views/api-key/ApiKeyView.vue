@@ -500,6 +500,16 @@ onMounted(() => {
                     <span>QQ图片可能无法正常显示，点击可尝试在新标签页打开</span>
                   </div>
                 </div>
+                <div class="log-sticker" v-if="log.stickerUrl">
+                  <span class="label">
+                    <el-icon><Picture /></el-icon>
+                    表情包
+                  </span>
+                  <div class="sticker-wrapper" @click="openImagePreview(log.stickerUrl)">
+                    <img :src="log.stickerUrl" alt="表情包" />
+                    <div class="image-tip">点击查看大图</div>
+                  </div>
+                </div>
               </div>
               <div class="log-footer">
                 <div class="token-info">
@@ -518,6 +528,10 @@ onMounted(() => {
                   <span class="web-tag" v-if="log.enableWebSearch">
                     <el-icon><Search /></el-icon>
                     联网
+                  </span>
+                  <span class="sticker-tag" v-if="log.enableSticker">
+                    <el-icon><Picture /></el-icon>
+                    表情包
                   </span>
                   <span class="model-tag" v-if="log.modelUsed">{{ log.modelUsed }}</span>
                 </div>
@@ -1101,6 +1115,59 @@ onMounted(() => {
 
 .web-tag .el-icon {
   font-size: 11px;
+}
+
+.sticker-tag {
+  font-size: 11px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sticker-tag .el-icon {
+  font-size: 11px;
+}
+
+.log-sticker {
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  padding: var(--spacing-sm);
+}
+
+.log-sticker .label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-xs);
+}
+
+.sticker-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.sticker-wrapper img {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 6px;
+  transition: opacity 0.2s;
+}
+
+.sticker-wrapper:hover img {
+  opacity: 0.8;
+}
+
+.sticker-wrapper:hover .image-tip {
+  opacity: 1;
 }
 
 .preview-image-full {
