@@ -43,10 +43,12 @@ const testForm = ref({
   sender: '',
   contextRounds: 0,
   useKnowledgeBase: false,
-  enableWebSearch: false
+  enableWebSearch: false,
+  enableSticker: false
 })
 const testLoading = ref(false)
 const testResponse = ref('')
+const testStickerUrl = ref('')
 const imageLoading = ref(false)
 
 const rules = {
@@ -206,7 +208,8 @@ const openTestDialog = (apiKey) => {
     sender: '',
     contextRounds: 0,
     useKnowledgeBase: false,
-    enableWebSearch: false
+    enableWebSearch: false,
+    enableSticker: false
   }
   testResponse.value = ''
   testDialogVisible.value = true
@@ -259,15 +262,24 @@ const handleTestCall = async () => {
         sender: testForm.value.sender || undefined,
         contextRounds: testForm.value.contextRounds || undefined,
         useKnowledgeBase: testForm.value.useKnowledgeBase || undefined,
-        enableWebSearch: testForm.value.enableWebSearch || undefined
+        enableWebSearch: testForm.value.enableWebSearch || undefined,
+        enableSticker: testForm.value.enableSticker || undefined
       })
     })
     
     const data = await res.json()
     if (data.code === 200) {
-      testResponse.value = data.data
+      // 判断返回的是字符串还是对象（表情包模式）
+      if (typeof data.data === 'object' && data.data !== null) {
+        testResponse.value = data.data.text || ''
+        testStickerUrl.value = data.data.stickerUrl || ''
+      } else {
+        testResponse.value = data.data
+        testStickerUrl.value = ''
+      }
     } else {
       testResponse.value = `错误: ${data.message}`
+      testStickerUrl.value = ''
     }
   } catch (error) {
     testResponse.value = `请求失败: ${error.message}`
@@ -628,6 +640,15 @@ onMounted(() => {
                 class="context-switch"
               />
             </div>
+            <div class="context-item">
+              <el-tooltip content="启用后AI回复会附带一张匹配的表情包" placement="top">
+                <span class="context-label">表情包回复</span>
+              </el-tooltip>
+              <el-switch
+                v-model="testForm.enableSticker"
+                class="context-switch"
+              />
+            </div>
           </div>
         </div>
         
@@ -710,6 +731,13 @@ onMounted(() => {
               <el-icon><Document /></el-icon>
               <span>发送请求后显示响应结果</span>
             </div>
+          </div>
+          <div v-if="testStickerUrl" class="sticker-preview">
+            <div class="sticker-label">
+              <el-icon><Picture /></el-icon>
+              <span>表情包</span>
+            </div>
+            <img :src="testStickerUrl" alt="表情包" class="sticker-image" @click="openImagePreview(testStickerUrl)" />
           </div>
         </div>
         
@@ -1322,6 +1350,34 @@ onMounted(() => {
   font-size: var(--font-size-sm);
   line-height: 1.6;
   color: var(--color-text);
+}
+
+.sticker-preview {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.sticker-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.sticker-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border: 1px solid var(--color-border-light);
+}
+
+.sticker-image:hover {
+  transform: scale(1.05);
 }
 
 .empty-placeholder {

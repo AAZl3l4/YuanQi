@@ -24,10 +24,10 @@ public class ApiRelayController {
      * API中转调用接口（免登录，API Key验证，支持上下文）
      */
     @PostMapping("/relay/call")
-    public Result<String> call(
-            @RequestHeader("X-API-Key") String apiKey, 
+    public Result<Object> call(
+            @RequestHeader("X-API-Key") String apiKey,
             @Validated @RequestBody RelayChatDTO chatDTO) {
-        String response = apiRelayService.call(apiKey, chatDTO);
+        Object response = apiRelayService.call(apiKey, chatDTO);
         return Result.success(response);
     }
 

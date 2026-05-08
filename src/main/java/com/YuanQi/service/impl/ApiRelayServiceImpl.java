@@ -1,10 +1,12 @@
 package com.YuanQi.service.impl;
 
+import cn.hutool.http.HttpUtil;
 import com.YuanQi.configuration.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ApiRelayLogMapper;
 import com.YuanQi.pojo.*;
 import com.YuanQi.pojo.dto.RelayChatDTO;
+import com.YuanQi.pojo.dto.StickerResponseDTO;
 import com.YuanQi.service.*;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
@@ -12,6 +14,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -64,15 +68,32 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             """;
 
     /**
+     * 表情包关键词提取提示词
+     */
+    private static final String STICKER_KEYWORD_PROMPT = """
+            请根据以下对话内容，提取一个最适合搜索表情包的中文关键词（2-4个字）。
+            要求：
+            1. 只返回关键词本身，不要有任何解释
+            2. 优先选择情绪类词汇（如：开心、无语、尴尬、生气、谢谢、点赞、加油、摸头、比心等）
+            3. 其次选择描述类词汇（如：摸鱼、加班、干饭、睡觉、打工人等）
+            """;
+
+    /**
+     * 表情包搜索API地址
+     */
+    private static final String STICKER_API_URL = "https://api.yuafeng.cn/API/ly/stickersSearch.php?msg=";
+
+    /**
      * 调用AI并返回结果（支持上下文）
      */
     @Override
-    public String call(String apiKey, RelayChatDTO chatDTO) {
+    public Object call(String apiKey, RelayChatDTO chatDTO) {
         String message = chatDTO.getMessage();
         String imageUrl = chatDTO.getImageUrl();
         String sender = chatDTO.getSender();
         Integer contextRounds = chatDTO.getContextRounds();
         Boolean enableWebSearch = chatDTO.getEnableWebSearch();
+        Boolean enableSticker = chatDTO.getEnableSticker();
 
         // 校验：消息内容和图片至少填一项
         if ((message == null || message.isEmpty()) && (imageUrl == null || imageUrl.isEmpty())) {
@@ -145,6 +166,14 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
             Long usedKnowledgeBaseId = (Boolean.TRUE.equals(chatDTO.getUseKnowledgeBase()) && key.getKnowledgeBaseId() != null)
                     ? key.getKnowledgeBaseId() : null;
             saveLog(key, config, sender, message, imageUrl, response, model, estimatedInputTokens, estimatedOutputTokens, usedKnowledgeBaseId, enableWebSearch);
+
+            // 如果启用了表情包回复，提取关键词并搜索表情包
+            if (Boolean.TRUE.equals(enableSticker)) {
+                String stickerUrl = fetchStickerUrl(chatClient, response);
+                if (stickerUrl != null) {
+                    return new StickerResponseDTO(response, stickerUrl);
+                }
+            }
 
             return response;
         } catch (Exception e) {
@@ -285,5 +314,73 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
 
         return page(pageParam, queryWrapper);
+    }
+
+    /**
+     * 提取关键词并搜索表情包URL
+     * @param chatClient ChatClient实例
+     * @param response AI回复内容
+     * @return 表情包URL，失败返回null
+     */
+    private String fetchStickerUrl(ChatClient chatClient, String response) {
+        try {
+            // 调用AI提取关键词
+            String keyword = chatClient.prompt()
+                    .system(STICKER_KEYWORD_PROMPT)
+                    .user("对话内容：" + response)
+                    .call()
+                    .content();
+
+            if (StringUtils.isBlank(keyword)) {
+                log.warn("表情包关键词提取结果为空");
+                return null;
+            }
+
+            // 清理关键词（去除标点、空格等）
+            keyword = keyword.trim().replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9]", "");
+            log.debug("表情包搜索关键词：{}", keyword);
+
+            if (keyword.isEmpty()) {
+                return null;
+            }
+
+            // 调用表情包搜索API
+            String apiResponse = HttpUtil.get(STICKER_API_URL + keyword, 10000);
+            if (StringUtils.isBlank(apiResponse)) {
+                log.warn("表情包API返回为空");
+                return null;
+            }
+
+            // 解析JSON获取第一个jpg表情包的URL
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(apiResponse);
+
+            if (root.get("Code").asInt() != 0) {
+                log.warn("表情包API返回错误：{}", root.get("msg").asText());
+                return null;
+            }
+
+            JsonNode dataArray = root.get("data");
+            if (dataArray == null || !dataArray.isArray() || dataArray.isEmpty()) {
+                log.warn("表情包API返回数据为空");
+                return null;
+            }
+
+            // 找第一个jpg格式的表情包
+            for (JsonNode item : dataArray) {
+                String format = item.get("sticker_format").asText("");
+                if ("jpg".equalsIgnoreCase(format)) {
+                    String stickerUrl = item.get("sticker_url").asText();
+                    log.debug("获取到表情包URL：{}", stickerUrl);
+                    return stickerUrl;
+                }
+            }
+
+            log.warn("未找到jpg格式的表情包");
+            return null;
+        } catch (Exception e) {
+            log.error("获取表情包失败", e);
+            return null;
+        }
     }
 }

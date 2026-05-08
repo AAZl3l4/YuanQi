@@ -45,4 +45,10 @@ public class RelayChatDTO {
      * 默认false（不启用）
      */
     private Boolean enableWebSearch = false;
+
+    /**
+     * 是否启用表情包回复
+     * 默认false（不启用）
+     */
+    private Boolean enableSticker = false;
 }

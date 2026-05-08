@@ -13,9 +13,9 @@ public interface ApiRelayService {
      * 调用AI并返回结果（支持上下文）
      * @param apiKey API Key字符串
      * @param chatDTO 聊天请求DTO
-     * @return AI回复内容
+     * @return AI回复内容（String或StickerResponseDTO）
      */
-    String call(String apiKey, RelayChatDTO chatDTO);
+    Object call(String apiKey, RelayChatDTO chatDTO);
 
     /**
      * 分页查询调用记录
