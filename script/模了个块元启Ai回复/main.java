@@ -198,6 +198,14 @@ boolean useWebSearch() {
     return getBoolData("enable_web_search", false);
 }
 
+boolean isStickerReply(String scopeKey) {
+    return getBoolData("sticker_reply_" + scopeKey, false);
+}
+
+void setStickerReply(String scopeKey, boolean value) {
+    setData("sticker_reply_" + scopeKey, value);
+}
+
 int getPaiCooldown() {
     Object v = getData("pai_cooldown");
     if (v == null) return 10;
@@ -559,6 +567,107 @@ String callAI(String msg, String imgUrl, String sender) {
     return result;
 }
 
+Map callAIWithSticker(String msg, String imgUrl, String sender, String scopeKey) {
+    String apiKey = getApiKey();
+    if (isEmpty(API_URL) || isEmpty(apiKey)) {
+        return null;
+    }
+
+    HttpURLConnection conn = null;
+    Map result = null;
+    try {
+        URL url = new URL(API_URL);
+        conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("X-API-Key", apiKey);
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(30000);
+        conn.setReadTimeout(60000);
+
+        JSONObject body = new JSONObject();
+        body.put("message", msg);
+        if (!isEmpty(imgUrl)) body.put("imageUrl", imgUrl);
+        if (!isEmpty(sender)) body.put("sender", sender);
+        body.put("contextRounds", getContextRounds());
+        body.put("useKnowledgeBase", useKnowledgeBase());
+        body.put("enableWebSearch", useWebSearch());
+        body.put("enableSticker", isStickerReply(scopeKey));
+
+        OutputStream os = conn.getOutputStream();
+        os.write(body.toString().getBytes("UTF-8"));
+        os.close();
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode != 200) {
+            return null;
+        }
+
+        InputStream inputStream = conn.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) sb.append(line);
+        reader.close();
+
+        String resp = sb.toString().trim();
+        if (isEmpty(resp)) {
+            return null;
+        }
+
+        try {
+            JSONObject json = new JSONObject(resp);
+            int code = json.optInt("code", -1);
+            if (code != 200) {
+                return null;
+            }
+            Object dataObj = json.opt("data");
+            if (dataObj == null) {
+                return null;
+            }
+            
+            String text = null;
+            String stickerUrl = null;
+            
+            if (dataObj instanceof String) {
+                text = (String) dataObj;
+            } else if (dataObj instanceof JSONObject) {
+                JSONObject dataJson = (JSONObject) dataObj;
+                text = dataJson.optString("text", null);
+                stickerUrl = dataJson.optString("stickerUrl", null);
+                if (stickerUrl != null) {
+                    stickerUrl = stickerUrl.trim();
+                    if (stickerUrl.startsWith("`") && stickerUrl.endsWith("`")) {
+                        stickerUrl = stickerUrl.substring(1, stickerUrl.length() - 1).trim();
+                    }
+                }
+            } else {
+                text = dataObj.toString();
+            }
+            
+            result = new HashMap();
+            result.put("text", text);
+            result.put("stickerUrl", stickerUrl);
+        } catch (Throwable e) {
+            error(e);
+            result = new HashMap();
+            result.put("text", resp);
+            result.put("stickerUrl", null);
+        }
+    } catch (Throwable e) {
+        error(e);
+    } finally {
+        if (conn != null) try { conn.disconnect(); } catch (Throwable e) {}
+    }
+    
+    return result;
+}
+
+String callAI(String msg, String imgUrl, String sender) {
+    Map response = callAIWithSticker(msg, imgUrl, sender, "");
+    return response == null ? "" : (String) response.get("text");
+}
+
 GradientDrawable panelBg(Context ctx) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_PANEL);
@@ -746,6 +855,56 @@ View toggleItem(Context ctx, String label, boolean checked, String key) {
             boolean currentVal = getBoolData(key, false);
             boolean newVal = !currentVal;
             setBoolData(key, newVal);
+            toggle.setText(newVal ? "开" : "关");
+            toggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
+            toggle.setBackground(chipBg(ctx, newVal));
+        }
+    });
+
+    return item;
+}
+
+View stickerReplyItem(Context ctx, String scopeKey) {
+    LinearLayout item = new LinearLayout(ctx);
+    item.setOrientation(LinearLayout.VERTICAL);
+    item.setBackground(cardBg(ctx));
+    item.setPadding(dpInt(ctx, 16), dpInt(ctx, 14), dpInt(ctx, 16), dpInt(ctx, 14));
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    params.bottomMargin = dpInt(ctx, 8);
+    item.setLayoutParams(params);
+
+    LinearLayout row = new LinearLayout(ctx);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+
+    TextView labelTv = new TextView(ctx);
+    labelTv.setText("表情包回复");
+    labelTv.setTextSize(14);
+    labelTv.setTextColor(TEXT_MAIN);
+    labelTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    row.addView(labelTv);
+
+    final TextView toggle = new TextView(ctx);
+    boolean enabled = isStickerReply(scopeKey);
+    toggle.setText(enabled ? "开" : "关");
+    toggle.setTextSize(12);
+    toggle.setTextColor(enabled ? TEXT_MAIN : TEXT_SUB);
+    toggle.setBackground(chipBg(ctx, enabled));
+    toggle.setPadding(dpInt(ctx, 12), dpInt(ctx, 4), dpInt(ctx, 12), dpInt(ctx, 4));
+    row.addView(toggle);
+    item.addView(row);
+
+    TextView hintTv = new TextView(ctx);
+    hintTv.setText("表情包回复会降低回复速度");
+    hintTv.setTextSize(10);
+    hintTv.setTextColor(TEXT_HINT);
+    hintTv.setPadding(0, dpInt(ctx, 4), 0, 0);
+    item.addView(hintTv);
+
+    item.setOnClickListener(new View.OnClickListener() {
+        public void onClick(View v) {
+            boolean newVal = !isStickerReply(scopeKey);
+            setStickerReply(scopeKey, newVal);
             toggle.setText(newVal ? "开" : "关");
             toggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
             toggle.setBackground(chipBg(ctx, newVal));
@@ -1993,6 +2152,7 @@ public void showMainMenu(String groupUin, String uin, int chatType) {
                     content.addView(toggleItem(activity, "回复自己消息", isReplySelf(sk), "reply_self_" + sk));
                 }
                 content.addView(toggleItem(activity, "拍一拍回复", isPaiReply(sk), "pai_reply_" + sk));
+                content.addView(stickerReplyItem(activity, sk));
                 content.addView(voiceReplyItem(activity, sk));
                 
                 content.addView(sectionTitle(activity, "定时任务"));
@@ -2179,34 +2339,46 @@ public void onMsg(Object msg) {
         String sender = getSenderUin(msg);
         
         String reply;
+        String stickerUrl = null;
         if (useDefaultReplyOnly()) {
             reply = getErrorReply();
             if (isEmpty(reply)) return;
         } else {
-            reply = callAI(cleanText, imgUrl, sender);
-            if (isEmpty(reply)) {
+            Map aiResponse = callAIWithSticker(cleanText, imgUrl, sender, scopeKey);
+            if (aiResponse == null || isEmpty((String) aiResponse.get("text"))) {
                 String errorReply = getErrorReply();
                 if (isEmpty(errorReply)) return;
                 reply = errorReply;
+            } else {
+                reply = (String) aiResponse.get("text");
+                stickerUrl = (String) aiResponse.get("stickerUrl");
             }
         }
 
         Object contact = getContact(msg);
         boolean isGroup = isGroupMsg(msg);
 
-        if (trySendVoiceReply(scopeKey, contact, reply)) {
-            return;
-        }
+        boolean voiceSent = trySendVoiceReply(scopeKey, contact, reply);
 
-        if (isGroup) {
-            if (isAutoQuote(scopeKey)) {
-                long msgId = getMsgId(msg);
-                reply(contact, msgId, reply);
+        if (!voiceSent) {
+            if (isGroup) {
+                if (isAutoQuote(scopeKey)) {
+                    long msgId = getMsgId(msg);
+                    reply(contact, msgId, reply);
+                } else {
+                    send(contact, reply);
+                }
             } else {
                 send(contact, reply);
             }
-        } else {
-            send(contact, reply);
+        }
+        
+        if (isStickerReply(scopeKey) && !isEmpty(stickerUrl)) {
+            try {
+                send(contact, "[pic=" + stickerUrl + "]");
+            } catch (Throwable e) {
+                error(e);
+            }
         }
 
     } catch (Throwable e) {

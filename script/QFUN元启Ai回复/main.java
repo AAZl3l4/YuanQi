@@ -161,6 +161,14 @@ boolean useWebSearch() {
     return getBoolean(CONFIG_NAME, "enable_web_search", false);
 }
 
+boolean isStickerReply(String scopeKey) {
+    return getBoolean(CONFIG_NAME, "sticker_reply_" + scopeKey, false);
+}
+
+void setStickerReply(String scopeKey, boolean value) {
+    putBoolean(CONFIG_NAME, "sticker_reply_" + scopeKey, value);
+}
+
 int getPaiCooldown() {
     int cd = getInt(CONFIG_NAME, "pai_cooldown", 10);
     return cd < 0 ? 0 : cd;
@@ -311,6 +319,119 @@ String callAI(String message, String imageUrl, String sender) {
     }
 }
 
+class AIResponse {
+    String text;
+    String stickerUrl;
+    
+    AIResponse(String text, String stickerUrl) {
+        this.text = text;
+        this.stickerUrl = stickerUrl;
+    }
+}
+
+AIResponse callAIWithSticker(String message, String imageUrl, String sender, String scopeKey) {
+    String apiKey = getApiKey();
+    if (isEmpty(DEFAULT_API_URL) || isEmpty(apiKey)) {
+        return null;
+    }
+
+    HttpURLConnection conn = null;
+    try {
+        URL url = new URL(DEFAULT_API_URL);
+        conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("X-API-Key", apiKey);
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(30000);
+        conn.setReadTimeout(60000);
+
+        JSONObject body = new JSONObject();
+        body.put("message", message);
+        if (!isEmpty(imageUrl)) {
+            body.put("imageUrl", imageUrl);
+        }
+        if (!isEmpty(sender)) {
+            body.put("sender", sender);
+        }
+        body.put("contextRounds", getContextRounds());
+        body.put("useKnowledgeBase", useKnowledgeBase());
+        body.put("enableWebSearch", useWebSearch());
+        body.put("enableSticker", isStickerReply(scopeKey));
+
+        OutputStream os = conn.getOutputStream();
+        os.write(body.toString().getBytes("UTF-8"));
+        os.close();
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode != 200) {
+            return null;
+        }
+
+        InputStream inputStream = conn.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+        reader.close();
+
+        String response = sb.toString().trim();
+        if (isEmpty(response)) return null;
+
+        try {
+            JSONObject json = new JSONObject(response);
+            int code = json.optInt("code", -1);
+            if (code != 200) {
+                return null;
+            }
+            Object dataObj = json.opt("data");
+            if (dataObj == null) {
+                return null;
+            }
+            
+            String text = null;
+            String stickerUrl = null;
+            
+            if (dataObj instanceof String) {
+                text = (String) dataObj;
+            } else if (dataObj instanceof JSONObject) {
+                JSONObject dataJson = (JSONObject) dataObj;
+                text = dataJson.optString("text", null);
+                stickerUrl = dataJson.optString("stickerUrl", null);
+                if (stickerUrl != null) {
+                    stickerUrl = stickerUrl.trim();
+                    if (stickerUrl.startsWith("`") && stickerUrl.endsWith("`")) {
+                        stickerUrl = stickerUrl.substring(1, stickerUrl.length() - 1).trim();
+                    }
+                }
+            } else {
+                text = dataObj.toString();
+            }
+            
+            return new AIResponse(text, stickerUrl);
+        } catch (Throwable e) {
+            error(e);
+        }
+
+        return new AIResponse(response, null);
+
+    } catch (Throwable e) {
+        error(e);
+        return null;
+    } finally {
+        if (conn != null) {
+            try { conn.disconnect(); } catch (Throwable ignore) {}
+        }
+    }
+}
+
+String callAI(String message, String imageUrl, String sender) {
+    AIResponse response = callAIWithSticker(message, imageUrl, sender, "");
+    return response == null ? null : response.text;
+}
+
 GradientDrawable createPanelBg(Context ctx) {
     GradientDrawable gd = new GradientDrawable();
     gd.setColor(BG_PANEL);
@@ -422,6 +543,56 @@ View createToggleItem(final Context ctx, String label, boolean checked, final St
             toggle.setText(newValue ? "开" : "关");
             toggle.setTextColor(newValue ? TEXT_MAIN : TEXT_SUB);
             toggle.setBackground(createChipBg(ctx, newValue));
+        }
+    });
+
+    return item;
+}
+
+View createStickerReplyItem(final Context ctx, final String scopeKey) {
+    LinearLayout item = new LinearLayout(ctx);
+    item.setOrientation(LinearLayout.VERTICAL);
+    item.setBackground(createCardBg(ctx));
+    item.setPadding(dp(16), dp(14), dp(16), dp(14));
+    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    params.bottomMargin = dp(8);
+    item.setLayoutParams(params);
+
+    LinearLayout row = new LinearLayout(ctx);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER_VERTICAL);
+
+    TextView labelTv = new TextView(ctx);
+    labelTv.setText("表情包回复");
+    labelTv.setTextSize(14);
+    labelTv.setTextColor(TEXT_MAIN);
+    labelTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    row.addView(labelTv);
+
+    final TextView toggle = new TextView(ctx);
+    boolean enabled = isStickerReply(scopeKey);
+    toggle.setText(enabled ? "开" : "关");
+    toggle.setTextSize(12);
+    toggle.setTextColor(enabled ? TEXT_MAIN : TEXT_SUB);
+    toggle.setBackground(createChipBg(ctx, enabled));
+    toggle.setPadding(dp(12), dp(4), dp(12), dp(4));
+    row.addView(toggle);
+    item.addView(row);
+
+    TextView hintTv = new TextView(ctx);
+    hintTv.setText("表情包回复会降低回复速度");
+    hintTv.setTextSize(10);
+    hintTv.setTextColor(TEXT_HINT);
+    hintTv.setPadding(0, dp(4), 0, 0);
+    item.addView(hintTv);
+
+    item.setOnClickListener(new View.OnClickListener() {
+        public void onClick(View v) {
+            boolean newVal = !isStickerReply(scopeKey);
+            setStickerReply(scopeKey, newVal);
+            toggle.setText(newVal ? "开" : "关");
+            toggle.setTextColor(newVal ? TEXT_MAIN : TEXT_SUB);
+            toggle.setBackground(createChipBg(ctx, newVal));
         }
     });
 
@@ -1471,6 +1642,7 @@ public void showMainMenu(int chatType, String peerUin, String name) {
                     content.addView(createToggleItem(activity, "回复自己消息", isReplySelf(scopeKey), "reply_self_" + scopeKey));
                 }
                 content.addView(createToggleItem(activity, "拍一拍回复", isPaiReply(scopeKey), "pai_reply_" + scopeKey));
+                content.addView(createStickerReplyItem(activity, scopeKey));
                 
                 content.addView(createSectionTitle(activity, "定时任务"));
                 content.addView(createTimerTaskEntry(activity, scopeKey, isGroup, dialog));
@@ -1595,15 +1767,19 @@ public void onMsg(Object msgData) {
 
         String sender = userUin;
         String reply;
+        String stickerUrl = null;
         if (useDefaultReplyOnly()) {
             reply = getErrorReply();
             if (isEmpty(reply)) return;
         } else {
-            reply = callAI(cleanText, imageUrl, sender);
-            if (isEmpty(reply)) {
+            AIResponse aiResponse = callAIWithSticker(cleanText, imageUrl, sender, scopeKey);
+            if (aiResponse == null || isEmpty(aiResponse.text)) {
                 String errorReply = getErrorReply();
                 if (isEmpty(errorReply)) return;
                 reply = errorReply;
+            } else {
+                reply = aiResponse.text;
+                stickerUrl = aiResponse.stickerUrl;
             }
         }
 
@@ -1617,6 +1793,14 @@ public void onMsg(Object msgData) {
             }
         } else {
             sendMsg(peerUin, reply, 1);
+        }
+        
+        if (isStickerReply(scopeKey) && !isEmpty(stickerUrl)) {
+            try {
+                sendPic(peerUin, stickerUrl, isGroup ? 2 : 1);
+            } catch (Throwable e) {
+                error(e);
+            }
         }
 
     } catch (Throwable e) {
