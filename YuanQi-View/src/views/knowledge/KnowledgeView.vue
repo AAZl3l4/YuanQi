@@ -12,6 +12,12 @@ const fileLoading = ref(false)
 const isEdit = ref(false)
 const searchId = ref('')
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const ALLOWED_DOC_TYPES = [
   'text/plain',
   'text/markdown',
@@ -48,13 +54,14 @@ const rules = {
 const loadKnowledge = async () => {
   loading.value = true
   try {
-    const params = { page: 1, size: 100 }
+    const params = { page: pagination.value.page, size: pagination.value.size }
     if (searchId.value) {
       params.id = searchId.value
     }
     const res = await getMyKnowledgeList(params)
     if (res.code === 200) {
       knowledgeBases.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
@@ -64,6 +71,12 @@ const loadKnowledge = async () => {
 }
 
 const handleSearch = () => {
+  pagination.value.page = 1
+  loadKnowledge()
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
   loadKnowledge()
 }
 
@@ -229,8 +242,18 @@ onMounted(() => {
       </el-col>
     </el-row>
     
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
     <el-empty v-if="!loading && knowledgeBases.length === 0" description="暂无知识库" />
-    
+
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑知识库' : '新建知识库'" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
@@ -390,5 +413,13 @@ onMounted(() => {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin-top: var(--spacing-xs);
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

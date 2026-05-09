@@ -9,18 +9,30 @@ const activeType = ref('image')
 const previewVisible = ref(false)
 const previewUrl = ref('')
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const loadContents = async () => {
   loading.value = true
   try {
-    const res = await getContentList({ page: 1, size: 100, type: activeType.value })
+    const res = await getContentList({ page: pagination.value.page, size: pagination.value.size, type: activeType.value })
     if (res.code === 200) {
       contents.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadContents()
 }
 
 const handleDelete = async (id) => {
@@ -64,9 +76,9 @@ onMounted(() => {
       <el-table-column label="生成结果" width="120">
         <template #default="{ row }">
           <div v-if="row.resultUrl" class="result-preview">
-            <img 
-              v-if="activeType === 'image'" 
-              :src="row.resultUrl" 
+            <img
+              v-if="activeType === 'image'"
+              :src="row.resultUrl"
               class="result-thumb"
               @click="openPreview(row.resultUrl)"
             />
@@ -92,7 +104,17 @@ onMounted(() => {
         </template>
       </el-table-column>
     </el-table>
-    
+
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
     <el-dialog v-model="previewVisible" :title="activeType === 'image' ? '图片预览' : '视频预览'" width="800px">
       <img v-if="activeType === 'image'" :src="previewUrl" class="preview-image" />
       <video v-else :src="previewUrl" class="preview-video" controls autoplay />
@@ -170,5 +192,13 @@ onMounted(() => {
 .preview-video {
   width: 100%;
   max-height: 70vh;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

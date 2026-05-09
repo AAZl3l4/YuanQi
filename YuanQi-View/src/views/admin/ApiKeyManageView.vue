@@ -6,18 +6,30 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const apiKeys = ref([])
 const loading = ref(false)
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const loadApiKeys = async () => {
   loading.value = true
   try {
-    const res = await getAdminApiKeyList({ page: 1, size: 100 })
+    const res = await getAdminApiKeyList({ page: pagination.value.page, size: pagination.value.size })
     if (res.code === 200) {
       apiKeys.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadApiKeys()
 }
 
 const handleDelete = async (id) => {
@@ -60,11 +72,29 @@ onMounted(() => {
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .api-key-manage-view {
   max-width: 1200px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

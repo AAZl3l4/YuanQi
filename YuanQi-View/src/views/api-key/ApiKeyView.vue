@@ -23,9 +23,15 @@ const senderSearch = ref('')
 const configIdSearch = ref('')
 const knowledgeBaseIdSearch = ref('')
 
+const keysPagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const logsPagination = ref({
   page: 1,
-  size: 100,
+  size: 20,
   total: 0
 })
 
@@ -61,15 +67,21 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
 const loadApiKeys = async () => {
   loading.value = true
   try {
-    const res = await getMyApiKeys({ page: 1, size: 100 })
+    const res = await getMyApiKeys({ page: keysPagination.value.page, size: keysPagination.value.size })
     if (res.code === 200) {
       apiKeys.value = res.data.records || []
+      keysPagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handleKeysPageChange = (page) => {
+  keysPagination.value.page = page
+  loadApiKeys()
 }
 
 const loadConfigs = async () => {
@@ -416,6 +428,15 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-wrapper" v-if="keysPagination.total > 0">
+          <el-pagination
+            v-model:current-page="keysPagination.page"
+            :page-size="keysPagination.size"
+            :total="keysPagination.total"
+            layout="total, prev, pager, next"
+            @current-change="handleKeysPageChange"
+          />
+        </div>
       </el-tab-pane>
       
       <el-tab-pane label="调用记录" name="logs">

@@ -9,10 +9,16 @@ const searchText = ref('')
 const searchId = ref('')
 const expandedPrompts = ref(new Set())
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const filteredConfigs = computed(() => {
   if (!searchText.value) return configs.value
   const keyword = searchText.value.toLowerCase()
-  return configs.value.filter(c => 
+  return configs.value.filter(c =>
     c.name?.toLowerCase().includes(keyword) ||
     c.username?.toLowerCase().includes(keyword) ||
     c.description?.toLowerCase().includes(keyword)
@@ -22,13 +28,14 @@ const filteredConfigs = computed(() => {
 const loadConfigs = async () => {
   loading.value = true
   try {
-    const params = { page: 1, size: 100 }
+    const params = { page: pagination.value.page, size: pagination.value.size }
     if (searchId.value) {
       params.id = searchId.value
     }
     const res = await getAdminRelayConfigList(params)
     if (res.code === 200) {
       configs.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
@@ -38,6 +45,12 @@ const loadConfigs = async () => {
 }
 
 const handleIdSearch = () => {
+  pagination.value.page = 1
+  loadConfigs()
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
   loadConfigs()
 }
 
@@ -196,6 +209,16 @@ onMounted(() => {
       </div>
     </div>
     
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
     <el-empty v-if="!loading && filteredConfigs.length === 0" description="暂无配置数据">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><FolderOpened /></el-icon>
@@ -474,15 +497,23 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
   }
-  
+
   .search-input {
     width: 100%;
   }
-  
+
   .config-grid {
     grid-template-columns: 1fr;
   }

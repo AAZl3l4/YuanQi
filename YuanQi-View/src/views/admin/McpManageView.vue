@@ -9,6 +9,12 @@ const dialogVisible = ref(false)
 const formRef = ref()
 const isEdit = ref(false)
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const form = ref({
   id: null,
   name: '',
@@ -25,15 +31,21 @@ const rules = {
 const loadTools = async () => {
   loading.value = true
   try {
-    const res = await getToolList()
+    const res = await getToolList({ page: pagination.value.page, size: pagination.value.size })
     if (res.code === 200) {
-      tools.value = res.data || []
+      tools.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadTools()
 }
 
 const handleToggle = async (row) => {
@@ -128,7 +140,17 @@ onMounted(() => {
         </template>
       </el-table-column>
     </el-table>
-    
+
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑工具' : '新建工具'" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
@@ -169,5 +191,13 @@ onMounted(() => {
 
 .page-title {
   user-select: none;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

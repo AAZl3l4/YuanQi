@@ -10,6 +10,12 @@ const generateType = ref('image')
 const generating = ref(false)
 const uploading = ref(false)
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const imageParams = ref({
   prompt: '',
   size: '1024x1024'
@@ -52,9 +58,10 @@ const fileInputRef = ref(null)
 const loadContents = async () => {
   loading.value = true
   try {
-    const res = await getMyContent({ page: 1, size: 50, type: generateType.value })
+    const res = await getMyContent({ page: pagination.value.page, size: pagination.value.size, type: generateType.value })
     if (res.code === 200) {
       contents.value = (res.data.records || []).reverse()
+      pagination.value.total = res.data.total || 0
       nextTick(() => {
         scrollToBottom()
       })
@@ -64,6 +71,11 @@ const loadContents = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadContents()
 }
 
 const scrollToBottom = () => {
@@ -389,10 +401,10 @@ onUnmounted(() => {
           <el-icon :size="64" color="#ddd"><Picture /></el-icon>
           <p>开始创作你的第一个{{ generateType === 'image' ? '图片' : '视频' }}吧</p>
         </div>
-        
-        <div 
-          v-for="item in contents" 
-          :key="item.id" 
+
+        <div
+          v-for="item in contents"
+          :key="item.id"
           class="message-item"
         >
           <div class="message-prompt">
@@ -455,8 +467,19 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <div class="pagination-wrapper" v-if="pagination.total > pagination.size">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            :page-size="pagination.size"
+            :total="pagination.total"
+            layout="total, prev, pager, next"
+            @current-change="handlePageChange"
+            small
+          />
+        </div>
       </div>
-      
+
       <div class="chat-input">
         <div class="input-wrapper">
           <el-input
@@ -752,5 +775,13 @@ onUnmounted(() => {
 .input-footer .tip {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>

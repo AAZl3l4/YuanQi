@@ -8,10 +8,16 @@ const loading = ref(false)
 const searchText = ref('')
 const expandedItems = ref(new Set())
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const filteredAgents = computed(() => {
   if (!searchText.value) return agents.value
   const keyword = searchText.value.toLowerCase()
-  return agents.value.filter(a => 
+  return agents.value.filter(a =>
     a.name?.toLowerCase().includes(keyword) ||
     a.username?.toLowerCase().includes(keyword) ||
     a.description?.toLowerCase().includes(keyword)
@@ -23,15 +29,21 @@ const totalPublic = computed(() => agents.value.filter(a => a.isPublic === 1).le
 const loadAgents = async () => {
   loading.value = true
   try {
-    const res = await getAdminAgentList({ page: 1, size: 100 })
+    const res = await getAdminAgentList({ page: pagination.value.page, size: pagination.value.size })
     if (res.code === 200) {
       agents.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadAgents()
 }
 
 const handleDelete = async (agent) => {
@@ -187,6 +199,16 @@ onMounted(() => {
       </div>
     </div>
     
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
+
     <el-empty v-if="!loading && filteredAgents.length === 0" description="暂无智能体数据">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><UserFilled /></el-icon>
@@ -457,15 +479,23 @@ onMounted(() => {
   color: var(--color-text-muted);
 }
 
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
   }
-  
+
   .search-input {
     width: 100%;
   }
-  
+
   .agent-grid {
     grid-template-columns: 1fr;
   }

@@ -4,8 +4,8 @@ export function getEnabledTools() {
   return request.get('/api/mcp/tools')
 }
 
-export function getToolList() {
-  return request.get('/api/mcp/list')
+export function getToolList(params) {
+  return request.get('/api/mcp/list', { params })
 }
 
 export function createTool(data) {

@@ -7,16 +7,23 @@ const knowledgeBases = ref([])
 const loading = ref(false)
 const searchId = ref('')
 
+const pagination = ref({
+  page: 1,
+  size: 20,
+  total: 0
+})
+
 const loadKnowledge = async () => {
   loading.value = true
   try {
-    const params = { page: 1, size: 100 }
+    const params = { page: pagination.value.page, size: pagination.value.size }
     if (searchId.value) {
       params.id = searchId.value
     }
     const res = await getKnowledgeList(params)
     if (res.code === 200) {
       knowledgeBases.value = res.data.records || []
+      pagination.value.total = res.data.total || 0
     }
   } catch (error) {
     console.error(error)
@@ -26,6 +33,12 @@ const loadKnowledge = async () => {
 }
 
 const handleSearch = () => {
+  pagination.value.page = 1
+  loadKnowledge()
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
   loadKnowledge()
 }
 
@@ -118,6 +131,16 @@ onMounted(() => {
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pagination-wrapper" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.page"
+        :page-size="pagination.size"
+        :total="pagination.total"
+        layout="total, prev, pager, next"
+        @current-change="handlePageChange"
+      />
+    </div>
   </div>
 </template>
 
@@ -177,5 +200,13 @@ onMounted(() => {
 
 .no-file {
   color: var(--color-text-muted);
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
 }
 </style>
