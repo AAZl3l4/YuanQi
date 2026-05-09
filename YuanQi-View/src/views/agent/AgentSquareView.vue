@@ -22,7 +22,6 @@ const knowledgeBases = ref([])
 const mcpTools = ref([])
 const avatarLoading = ref(false)
 const searchText = ref('')
-const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
@@ -86,12 +85,6 @@ const loadAgents = async () => {
     if (res.code === 200) {
       agents.value = res.data.records || []
       pagination.value.total = res.data.total || 0
-      if (agents.value.length > 0) {
-        stats.value = {
-          publicCount: agents.value[0].publicCount || 0,
-          privateCount: agents.value[0].privateCount || 0
-        }
-      }
     }
   } catch (error) {
     console.error(error)

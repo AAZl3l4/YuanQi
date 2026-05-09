@@ -1,7 +1,7 @@
 package com.YuanQi.service.impl;
 
 import cn.hutool.http.HttpUtil;
-import com.YuanQi.configuration.McpTools;
+import com.YuanQi.MCP.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.ApiRelayLogMapper;
 import com.YuanQi.pojo.*;

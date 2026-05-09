@@ -16,7 +16,6 @@ const isEdit = ref(false)
 const expandedPrompts = ref(new Set())
 const searchText = ref('')
 const searchId = ref('')
-const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
@@ -56,12 +55,6 @@ const loadConfigs = async () => {
     if (res.code === 200) {
       configs.value = res.data.records || []
       pagination.value.total = res.data.total || 0
-      if (configs.value.length > 0) {
-        stats.value = {
-          publicCount: configs.value[0].publicCount || 0,
-          privateCount: configs.value[0].privateCount || 0
-        }
-      }
     }
   } catch (error) {
     console.error(error)

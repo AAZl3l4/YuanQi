@@ -1,11 +1,10 @@
 package com.YuanQi.service.impl;
 
 import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.YuanQi.configuration.McpTools;
+import com.YuanQi.MCP.McpTools;
 import com.YuanQi.configuration.SpringAiConfig;
 import com.YuanQi.mapper.AgentMapper;
 import com.YuanQi.mapper.ChatMessageMapper;

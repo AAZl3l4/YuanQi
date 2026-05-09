@@ -1,4 +1,4 @@
-package com.YuanQi.configuration;
+package com.YuanQi.MCP;
 
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;

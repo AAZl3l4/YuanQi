@@ -1,4 +1,4 @@
-package com.YuanQi.tool;
+package com.YuanQi.MCP;
 
 import com.YuanQi.mapper.*;
 import com.YuanQi.pojo.*;

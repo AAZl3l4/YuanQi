@@ -8,7 +8,7 @@ import com.YuanQi.pojo.User;
 import com.YuanQi.pojo.dto.SystemChatDTO;
 import com.YuanQi.service.SystemChatService;
 import com.YuanQi.service.UserService;
-import com.YuanQi.tool.SystemTools;
+import com.YuanQi.MCP.SystemTools;
 import com.YuanQi.utils.BusinessException;
 import com.YuanQi.utils.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
