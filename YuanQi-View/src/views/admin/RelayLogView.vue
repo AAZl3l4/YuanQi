@@ -19,15 +19,10 @@ const pagination = ref({
   total: 0
 })
 
-const filteredLogs = computed(() => {
-  if (!searchText.value) return logs.value
-  const keyword = searchText.value.toLowerCase()
-  return logs.value.filter(log => 
-    log.inputMessage?.toLowerCase().includes(keyword) ||
-    log.outputMessage?.toLowerCase().includes(keyword) ||
-    log.modelUsed?.toLowerCase().includes(keyword)
-  )
-})
+const handleSearch = () => {
+  pagination.value.page = 1
+  loadLogs()
+}
 
 const loadLogs = async () => {
   loading.value = true
@@ -38,7 +33,8 @@ const loadLogs = async () => {
       userId: userIdSearch.value || undefined,
       sender: senderSearch.value || undefined,
       configId: configIdSearch.value || undefined,
-      knowledgeBaseId: knowledgeBaseIdSearch.value || undefined
+      knowledgeBaseId: knowledgeBaseIdSearch.value || undefined,
+      keyword: searchText.value || undefined
     })
     if (res.code === 200) {
       logs.value = res.data.records || []
@@ -187,7 +183,8 @@ onMounted(() => {
             prefix-icon="Search"
             clearable
             class="search-input"
-            @keyup.enter="loadLogs"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
           />
           <el-button type="primary" @click="loadLogs">
             <el-icon><Search /></el-icon>
@@ -201,7 +198,7 @@ onMounted(() => {
     </div>
     
     <div class="logs-grid" v-loading="loading">
-      <div v-for="log in filteredLogs" :key="log.id" class="log-card card">
+      <div v-for="log in logs" :key="log.id" class="log-card card">
         <div class="log-header">
           <div class="header-row">
             <div class="id-item">
@@ -305,7 +302,7 @@ onMounted(() => {
       </div>
     </div>
     
-    <el-empty v-if="!loading && filteredLogs.length === 0" description="暂无调用记录">
+    <el-empty v-if="!loading && logs.length === 0" description="暂无调用记录">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><Document /></el-icon>
       </template>

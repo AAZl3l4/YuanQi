@@ -3,6 +3,7 @@ package com.YuanQi.controller;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.pojo.Agent;
+import com.YuanQi.pojo.vo.AgentVO;
 import com.YuanQi.service.AgentService;
 import com.YuanQi.utils.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -57,30 +58,34 @@ public class AgentController {
     }
 
     /**
-     * 获取智能体列表
+     * 获取智能体列表（带统计信息）
      * @param onlyMine 只看自己的（默认false，查自己的+公开的）
+     * @param keyword 搜索关键词
      */
     @GetMapping("/list")
-    public Result<IPage<Agent>> list(
+    public Result<IPage<AgentVO>> list(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) Boolean onlyMine) {
+            @RequestParam(required = false) Boolean onlyMine,
+            @RequestParam(required = false) String keyword) {
         Long userId = StpUtil.getLoginIdAsLong();
-        IPage<Agent> result = agentService.pageList(page, size, userId, onlyMine);
+        IPage<AgentVO> result = agentService.pageList(page, size, userId, onlyMine, keyword);
         return Result.success(result);
     }
 
     /**
-     * 管理员查询智能体列表
+     * 管理员查询智能体列表（带统计信息）
      * @param userId 指定用户ID（不传查全部）
+     * @param keyword 搜索关键词
      */
     @SaCheckRole("admin")
     @GetMapping("/admin/list")
-    public Result<IPage<Agent>> adminList(
+    public Result<IPage<AgentVO>> adminList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) Long userId) {
-        IPage<Agent> result = agentService.pageList(page, size, userId, true);
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String keyword) {
+        IPage<AgentVO> result = agentService.pageList(page, size, userId, true, keyword);
         return Result.success(result);
     }
 

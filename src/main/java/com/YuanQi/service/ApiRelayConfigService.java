@@ -1,6 +1,7 @@
 package com.YuanQi.service;
 
 import com.YuanQi.pojo.ApiRelayConfig;
+import com.YuanQi.pojo.vo.RelayConfigVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -20,11 +21,12 @@ public interface ApiRelayConfigService extends IService<ApiRelayConfig> {
     ApiRelayConfig update(ApiRelayConfig config);
 
     /**
-     * 分页查询配置
+     * 分页查询配置（带统计信息）
      * @param userId 指定用户ID
      * @param onlyMine 只看自己的
+     * @param keyword 搜索关键词
      */
-    IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id);
+    IPage<RelayConfigVO> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id, String keyword);
 
     /**
      * 删除自己的配置

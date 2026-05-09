@@ -3,9 +3,9 @@ package com.YuanQi.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.mapper.ApiRelayConfigMapper;
 import com.YuanQi.pojo.ApiRelayConfig;
+import com.YuanQi.pojo.vo.RelayConfigVO;
 import com.YuanQi.service.ApiRelayConfigService;
 import com.YuanQi.utils.BusinessException;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -47,12 +47,12 @@ public class ApiRelayConfigServiceImpl extends ServiceImpl<ApiRelayConfigMapper,
     }
 
     /**
-     * 分页查询配置
+     * 分页查询配置（带统计信息）
      */
     @Override
-    public IPage<ApiRelayConfig> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id) {
-        Page<ApiRelayConfig> pageParam = new Page<>(page, size);
-        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine, id);
+    public IPage<RelayConfigVO> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, Long id, String keyword) {
+        Page<RelayConfigVO> pageParam = new Page<>(page, size);
+        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine, id, keyword);
     }
 
     /**

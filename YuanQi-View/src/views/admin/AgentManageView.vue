@@ -7,6 +7,7 @@ const agents = ref([])
 const loading = ref(false)
 const searchText = ref('')
 const expandedItems = ref(new Set())
+const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
@@ -14,25 +15,26 @@ const pagination = ref({
   total: 0
 })
 
-const filteredAgents = computed(() => {
-  if (!searchText.value) return agents.value
-  const keyword = searchText.value.toLowerCase()
-  return agents.value.filter(a =>
-    a.name?.toLowerCase().includes(keyword) ||
-    a.username?.toLowerCase().includes(keyword) ||
-    a.description?.toLowerCase().includes(keyword)
-  )
-})
-
-const totalPublic = computed(() => agents.value.filter(a => a.isPublic === 1).length)
+const handleSearch = () => {
+  pagination.value.page = 1
+  loadAgents()
+}
 
 const loadAgents = async () => {
   loading.value = true
   try {
-    const res = await getAdminAgentList({ page: pagination.value.page, size: pagination.value.size })
+    const params = { page: pagination.value.page, size: pagination.value.size }
+    if (searchText.value) {
+      params.keyword = searchText.value
+    }
+    const res = await getAdminAgentList(params)
     if (res.code === 200) {
       agents.value = res.data.records || []
       pagination.value.total = res.data.total || 0
+      stats.value = {
+        publicCount: agents.value.length > 0 ? (agents.value[0].publicCount || 0) : 0,
+        privateCount: agents.value.length > 0 ? (agents.value[0].privateCount || 0) : 0
+      }
     }
   } catch (error) {
     console.error(error)
@@ -99,29 +101,35 @@ onMounted(() => {
         </h2>
         <div class="header-stats">
           <div class="stat-item">
-            <span class="stat-value">{{ agents.length }}</span>
-            <span class="stat-label">总数</span>
+            <span class="stat-value">{{ pagination.total }}</span>
+            <span class="stat-label">总智能体</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-value public">{{ totalPublic }}</span>
+            <span class="stat-value public">{{ stats.publicCount }}</span>
             <span class="stat-label">公开</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value private">{{ stats.privateCount }}</span>
+            <span class="stat-label">私有</span>
           </div>
         </div>
       </div>
       <div class="header-right">
         <el-input
           v-model="searchText"
-          placeholder="搜索名称、创建者..."
+          placeholder="搜索名称或描述"
           prefix-icon="Search"
           clearable
           class="search-input"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
         />
       </div>
     </div>
     
     <div class="agent-grid" v-loading="loading">
-      <div v-for="agent in filteredAgents" :key="agent.id" class="agent-card card">
+      <div v-for="agent in agents" :key="agent.id" class="agent-card card">
         <div class="card-header">
           <div class="agent-avatar" :style="{ background: getAvatarColor(agent.name) }">
             <img v-if="agent.avatar" :src="agent.avatar" alt="" />
@@ -209,7 +217,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-empty v-if="!loading && filteredAgents.length === 0" description="暂无智能体数据">
+    <el-empty v-if="!loading && agents.length === 0" description="暂无智能体数据">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><UserFilled /></el-icon>
       </template>

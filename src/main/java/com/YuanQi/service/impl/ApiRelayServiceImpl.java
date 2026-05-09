@@ -300,7 +300,7 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
      * 分页查询调用记录
      */
     @Override
-    public IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId, String sender, Long configId, Long knowledgeBaseId) {
+    public IPage<ApiRelayLog> pageList(Integer page, Integer size, Long userId, String sender, Long configId, Long knowledgeBaseId, String keyword) {
         Page<ApiRelayLog> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<ApiRelayLog> queryWrapper = new LambdaQueryWrapper<>();
         if (userId != null) {
@@ -314,6 +314,11 @@ public class ApiRelayServiceImpl extends ServiceImpl<ApiRelayLogMapper, ApiRelay
         }
         if (knowledgeBaseId != null) {
             queryWrapper.eq(ApiRelayLog::getKnowledgeBaseId, knowledgeBaseId);
+        }
+        if (StringUtils.isNotBlank(keyword)) {
+            queryWrapper.and(qw -> qw.like(ApiRelayLog::getInputMessage, keyword)
+                    .or().like(ApiRelayLog::getOutputMessage, keyword)
+                    .or().like(ApiRelayLog::getModelUsed, keyword));
         }
         queryWrapper.orderByDesc(ApiRelayLog::getCreateTime);
 

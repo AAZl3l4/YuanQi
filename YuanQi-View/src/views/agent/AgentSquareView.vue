@@ -22,10 +22,11 @@ const knowledgeBases = ref([])
 const mcpTools = ref([])
 const avatarLoading = ref(false)
 const searchText = ref('')
+const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
-  size: 20,
+  size: 21,
   total: 0
 })
 
@@ -48,14 +49,10 @@ const rules = {
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg']
 
-const filteredAgents = computed(() => {
-  if (!searchText.value) return agents.value
-  const keyword = searchText.value.toLowerCase()
-  return agents.value.filter(a => 
-    a.name?.toLowerCase().includes(keyword) ||
-    a.description?.toLowerCase().includes(keyword)
-  )
-})
+const handleSearch = () => {
+  pagination.value.page = 1
+  loadAgents()
+}
 
 const handleAvatarUpload = async (file) => {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
@@ -81,10 +78,20 @@ const handleAvatarUpload = async (file) => {
 const loadAgents = async () => {
   loading.value = true
   try {
-    const res = await getAgentList({ page: pagination.value.page, size: pagination.value.size, onlyMine: onlyMine.value })
+    const params = { page: pagination.value.page, size: pagination.value.size, onlyMine: onlyMine.value }
+    if (searchText.value) {
+      params.keyword = searchText.value
+    }
+    const res = await getAgentList(params)
     if (res.code === 200) {
       agents.value = res.data.records || []
       pagination.value.total = res.data.total || 0
+      if (agents.value.length > 0) {
+        stats.value = {
+          publicCount: agents.value[0].publicCount || 0,
+          privateCount: agents.value[0].privateCount || 0
+        }
+      }
     }
   } catch (error) {
     console.error(error)
@@ -229,7 +236,7 @@ onMounted(() => {
         </h2>
         <div class="header-stats">
           <div class="stat-item">
-            <span class="stat-value">{{ agents.length }}</span>
+            <span class="stat-value">{{ pagination.total }}</span>
             <span class="stat-label">{{ onlyMine ? '我的智能体' : '智能体' }}</span>
           </div>
         </div>
@@ -241,6 +248,8 @@ onMounted(() => {
           prefix-icon="Search"
           clearable
           class="search-input"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
         />
         <el-radio-group v-model="onlyMine" @change="loadAgents" size="small">
           <el-radio-button :value="false">全部</el-radio-button>
@@ -254,7 +263,7 @@ onMounted(() => {
     </div>
     
     <div class="agent-grid" v-loading="loading">
-      <div v-for="agent in filteredAgents" :key="agent.id" class="agent-card card">
+      <div v-for="agent in agents" :key="agent.id" class="agent-card card">
         <div class="card-header">
           <div class="agent-avatar" :style="{ background: getAvatarColor(agent.name) }">
             <img v-if="agent.avatar" :src="agent.avatar" alt="" />
@@ -319,7 +328,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-empty v-if="!loading && filteredAgents.length === 0" description="暂无智能体">
+    <el-empty v-if="!loading && agents.length === 0" description="暂无智能体">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><UserFilled /></el-icon>
       </template>

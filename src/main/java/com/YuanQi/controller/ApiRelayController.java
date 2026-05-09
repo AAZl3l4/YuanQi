@@ -33,6 +33,7 @@ public class ApiRelayController {
 
     /**
      * 查看自己的调用记录
+     * @param keyword 搜索关键词
      */
     @GetMapping("/relay/my/logs")
     public Result<IPage<ApiRelayLog>> myLogs(
@@ -40,14 +41,16 @@ public class ApiRelayController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sender,
             @RequestParam(required = false) Long configId,
-            @RequestParam(required = false) Long knowledgeBaseId) {
+            @RequestParam(required = false) Long knowledgeBaseId,
+            @RequestParam(required = false) String keyword) {
         Long userId = StpUtil.getLoginIdAsLong();
-        IPage<ApiRelayLog> result = apiRelayService.pageList(page, size, userId, sender, configId, knowledgeBaseId);
+        IPage<ApiRelayLog> result = apiRelayService.pageList(page, size, userId, sender, configId, knowledgeBaseId, keyword);
         return Result.success(result);
     }
 
     /**
      * 管理员查看调用记录
+     * @param keyword 搜索关键词
      */
     @SaCheckRole("admin")
     @GetMapping("/relay/admin/logs")
@@ -57,8 +60,9 @@ public class ApiRelayController {
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String sender,
             @RequestParam(required = false) Long configId,
-            @RequestParam(required = false) Long knowledgeBaseId) {
-        IPage<ApiRelayLog> result = apiRelayService.pageList(page, size, userId, sender, configId, knowledgeBaseId);
+            @RequestParam(required = false) Long knowledgeBaseId,
+            @RequestParam(required = false) String keyword) {
+        IPage<ApiRelayLog> result = apiRelayService.pageList(page, size, userId, sender, configId, knowledgeBaseId, keyword);
         return Result.success(result);
     }
 }

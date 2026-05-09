@@ -16,6 +16,7 @@ const isEdit = ref(false)
 const expandedPrompts = ref(new Set())
 const searchText = ref('')
 const searchId = ref('')
+const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
@@ -36,20 +37,10 @@ const rules = {
   personaPrompt: [{ required: true, message: '请输入人设提示词', trigger: 'blur' }]
 }
 
-const filteredConfigs = computed(() => {
-  let result = configs.value
-  
-  // 文本筛选（前端过滤）
-  if (searchText.value) {
-    const keyword = searchText.value.toLowerCase()
-    result = result.filter(c => 
-      c.name?.toLowerCase().includes(keyword) ||
-      c.description?.toLowerCase().includes(keyword)
-    )
-  }
-  
-  return result
-})
+const handleSearch = () => {
+  pagination.value.page = 1
+  loadConfigs()
+}
 
 const loadConfigs = async () => {
   loading.value = true
@@ -58,10 +49,19 @@ const loadConfigs = async () => {
     if (searchId.value) {
       params.id = searchId.value
     }
+    if (searchText.value) {
+      params.keyword = searchText.value
+    }
     const res = await getRelayConfigList(params)
     if (res.code === 200) {
       configs.value = res.data.records || []
       pagination.value.total = res.data.total || 0
+      if (configs.value.length > 0) {
+        stats.value = {
+          publicCount: configs.value[0].publicCount || 0,
+          privateCount: configs.value[0].privateCount || 0
+        }
+      }
     }
   } catch (error) {
     console.error(error)
@@ -179,8 +179,8 @@ onMounted(() => {
         </h2>
         <div class="header-stats">
           <div class="stat-item">
-            <span class="stat-value">{{ configs.length }}</span>
-            <span class="stat-label">{{ onlyMine ? '我的配置' : '公开配置' }}</span>
+            <span class="stat-value">{{ pagination.total }}</span>
+            <span class="stat-label">{{ onlyMine ? '我的配置' : '配置' }}</span>
           </div>
         </div>
       </div>
@@ -200,6 +200,8 @@ onMounted(() => {
             prefix-icon="Search"
             clearable
             class="search-input"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
           />
           <el-button type="primary" @click="handleIdSearch">
             <el-icon><Search /></el-icon>
@@ -217,7 +219,7 @@ onMounted(() => {
     </div>
     
     <div class="config-grid" v-loading="loading">
-      <div v-for="config in filteredConfigs" :key="config.id" class="config-card card">
+      <div v-for="config in configs" :key="config.id" class="config-card card">
         <div class="card-header">
           <div class="config-avatar" :style="{ background: getAvatarColor(config.name || '默认') }">
             {{ (config.name || '配')[0] }}
@@ -289,7 +291,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-empty v-if="!loading && filteredConfigs.length === 0" description="暂无配置数据">
+    <el-empty v-if="!loading && configs.length === 0" description="暂无配置数据">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><FolderOpened /></el-icon>
       </template>

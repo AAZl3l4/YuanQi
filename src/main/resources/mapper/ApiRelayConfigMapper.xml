@@ -2,8 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.YuanQi.mapper.ApiRelayConfigMapper">
 
-    <!-- 分页查询API中转配置（带用户名） -->
-    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.ApiRelayConfig">
+    <!-- 分页查询API中转配置（带用户名和统计信息） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.vo.RelayConfigVO">
         SELECT
             arc.id,
             arc.user_id,
@@ -14,9 +14,32 @@
             arc.is_public,
             arc.deleted,
             arc.create_time,
-            arc.update_time
+            arc.update_time,
+            stats.public_count,
+            stats.private_count
         FROM api_relay_config arc
         LEFT JOIN sys_user u ON arc.user_id = u.id
+        CROSS JOIN (
+            SELECT
+                SUM(CASE WHEN is_public = 1 THEN 1 ELSE 0 END) AS public_count,
+                SUM(CASE WHEN is_public = 0 THEN 1 ELSE 0 END) AS private_count
+            FROM api_relay_config
+            WHERE deleted = 0
+            <if test="userId != null">
+                <if test="onlyMine == true">
+                    AND user_id = #{userId}
+                </if>
+                <if test="onlyMine == false or onlyMine == null">
+                    AND (user_id = #{userId} OR is_public = 1)
+                </if>
+            </if>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        ) stats
         WHERE arc.deleted = 0
         <if test="userId != null">
             <if test="onlyMine == true">
@@ -28,6 +51,9 @@
         </if>
         <if test="id != null">
             AND arc.id = #{id}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (arc.name LIKE CONCAT('%', #{keyword}, '%') OR arc.description LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         ORDER BY arc.create_time DESC
     </select>

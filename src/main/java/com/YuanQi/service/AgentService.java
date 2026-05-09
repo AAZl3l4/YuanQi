@@ -1,6 +1,7 @@
 package com.YuanQi.service;
 
 import com.YuanQi.pojo.Agent;
+import com.YuanQi.pojo.vo.AgentVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -25,11 +26,12 @@ public interface AgentService extends IService<Agent> {
     void delete(Long id);
 
     /**
-     * 分页获取智能体列表
+     * 分页获取智能体列表（带统计信息）
      * @param userId 指定用户ID
      * @param onlyMine 只看自己的
+     * @param keyword 搜索关键词
      */
-    IPage<Agent> pageList(Integer page, Integer size, Long userId, Boolean onlyMine);
+    IPage<AgentVO> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, String keyword);
 
     /**
      * 检查智能体是否属于当前用户

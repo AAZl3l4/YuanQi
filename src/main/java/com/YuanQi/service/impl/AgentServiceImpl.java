@@ -3,9 +3,9 @@ package com.YuanQi.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import com.YuanQi.mapper.AgentMapper;
 import com.YuanQi.pojo.Agent;
+import com.YuanQi.pojo.vo.AgentVO;
 import com.YuanQi.service.AgentService;
 import com.YuanQi.utils.BusinessException;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -64,12 +64,12 @@ public class AgentServiceImpl extends ServiceImpl<AgentMapper, Agent> implements
     }
 
     /**
-     * 分页获取智能体列表
+     * 分页获取智能体列表（带统计信息）
      */
     @Override
-    public IPage<Agent> pageList(Integer page, Integer size, Long userId, Boolean onlyMine) {
-        Page<Agent> pageParam = new Page<>(page, size);
-        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine);
+    public IPage<AgentVO> pageList(Integer page, Integer size, Long userId, Boolean onlyMine, String keyword) {
+        Page<AgentVO> pageParam = new Page<>(page, size);
+        return baseMapper.selectPageWithUsername(pageParam, userId, onlyMine, keyword);
     }
 
     /**

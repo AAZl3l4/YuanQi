@@ -8,6 +8,7 @@ const loading = ref(false)
 const searchText = ref('')
 const searchId = ref('')
 const expandedPrompts = ref(new Set())
+const stats = ref({ publicCount: 0, privateCount: 0 })
 
 const pagination = ref({
   page: 1,
@@ -15,15 +16,10 @@ const pagination = ref({
   total: 0
 })
 
-const filteredConfigs = computed(() => {
-  if (!searchText.value) return configs.value
-  const keyword = searchText.value.toLowerCase()
-  return configs.value.filter(c =>
-    c.name?.toLowerCase().includes(keyword) ||
-    c.username?.toLowerCase().includes(keyword) ||
-    c.description?.toLowerCase().includes(keyword)
-  )
-})
+const handleSearch = () => {
+  pagination.value.page = 1
+  loadConfigs()
+}
 
 const loadConfigs = async () => {
   loading.value = true
@@ -32,10 +28,17 @@ const loadConfigs = async () => {
     if (searchId.value) {
       params.id = searchId.value
     }
+    if (searchText.value) {
+      params.keyword = searchText.value
+    }
     const res = await getAdminRelayConfigList(params)
     if (res.code === 200) {
       configs.value = res.data.records || []
       pagination.value.total = res.data.total || 0
+      stats.value = {
+        publicCount: configs.value.length > 0 ? (configs.value[0].publicCount || 0) : 0,
+        privateCount: configs.value.length > 0 ? (configs.value[0].privateCount || 0) : 0
+      }
     }
   } catch (error) {
     console.error(error)
@@ -107,16 +110,16 @@ onMounted(() => {
         </h2>
         <div class="header-stats">
           <div class="stat-item">
-            <span class="stat-value">{{ configs.length }}</span>
+            <span class="stat-value">{{ pagination.total }}</span>
             <span class="stat-label">总配置</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-value public">{{ configs.filter(c => c.isPublic === 1).length }}</span>
+            <span class="stat-value public">{{ stats.publicCount }}</span>
             <span class="stat-label">公开</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value private">{{ configs.filter(c => c.isPublic !== 1).length }}</span>
+            <span class="stat-value private">{{ stats.privateCount }}</span>
             <span class="stat-label">私有</span>
           </div>
         </div>
@@ -133,10 +136,12 @@ onMounted(() => {
           />
           <el-input
             v-model="searchText"
-            placeholder="搜索配置名称、创建者..."
+            placeholder="搜索配置名称或描述"
             prefix-icon="Search"
             clearable
             class="search-input"
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
           />
           <el-button type="primary" @click="handleIdSearch">
             <el-icon><Search /></el-icon>
@@ -146,7 +151,7 @@ onMounted(() => {
     </div>
     
     <div class="config-grid" v-loading="loading">
-      <div v-for="config in filteredConfigs" :key="config.id" class="config-card card">
+      <div v-for="config in configs" :key="config.id" class="config-card card">
         <div class="card-header">
           <div class="config-avatar" :style="{ background: getAvatarColor(config.name || '默认') }">
             {{ (config.name || '配')[0] }}
@@ -219,7 +224,7 @@ onMounted(() => {
       />
     </div>
 
-    <el-empty v-if="!loading && filteredConfigs.length === 0" description="暂无配置数据">
+    <el-empty v-if="!loading && configs.length === 0" description="暂无配置数据">
       <template #image>
         <el-icon :size="60" color="#c0c4cc"><FolderOpened /></el-icon>
       </template>

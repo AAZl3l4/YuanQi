@@ -1,6 +1,7 @@
 package com.YuanQi.mapper;
 
 import com.YuanQi.pojo.ApiRelayConfig;
+import com.YuanQi.pojo.vo.RelayConfigVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -14,11 +15,12 @@ import org.apache.ibatis.annotations.Param;
 public interface ApiRelayConfigMapper extends BaseMapper<ApiRelayConfig> {
 
     /**
-     * 分页查询API中转配置（带用户名）
+     * 分页查询API中转配置（带用户名和统计信息）
      */
-    IPage<ApiRelayConfig> selectPageWithUsername(
-            Page<ApiRelayConfig> page,
+    IPage<RelayConfigVO> selectPageWithUsername(
+            Page<RelayConfigVO> page,
             @Param("userId") Long userId,
             @Param("onlyMine") Boolean onlyMine,
-            @Param("id") Long id);
+            @Param("id") Long id,
+            @Param("keyword") String keyword);
 }

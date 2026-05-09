@@ -2,8 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.YuanQi.mapper.AgentMapper">
 
-    <!-- 分页查询智能体（带用户名） -->
-    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.Agent">
+    <!-- 分页查询智能体（带用户名和统计信息） -->
+    <select id="selectPageWithUsername" resultType="com.YuanQi.pojo.vo.AgentVO">
         SELECT
             a.id,
             a.user_id,
@@ -19,9 +19,29 @@
             a.sort_order,
             a.deleted,
             a.create_time,
-            a.update_time
+            a.update_time,
+            stats.public_count,
+            stats.private_count
         FROM agent a
         LEFT JOIN sys_user u ON a.user_id = u.id
+        CROSS JOIN (
+            SELECT
+                SUM(CASE WHEN is_public = 1 THEN 1 ELSE 0 END) AS public_count,
+                SUM(CASE WHEN is_public = 0 THEN 1 ELSE 0 END) AS private_count
+            FROM agent
+            WHERE deleted = 0
+            <if test="userId != null">
+                <if test="onlyMine == true">
+                    AND user_id = #{userId}
+                </if>
+                <if test="onlyMine == false or onlyMine == null">
+                    AND (user_id = #{userId} OR is_public = 1)
+                </if>
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        ) stats
         WHERE a.deleted = 0
         <if test="userId != null">
             <if test="onlyMine == true">
@@ -30,6 +50,9 @@
             <if test="onlyMine == false or onlyMine == null">
                 AND (a.user_id = #{userId} OR a.is_public = 1)
             </if>
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (a.name LIKE CONCAT('%', #{keyword}, '%') OR a.description LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         ORDER BY a.sort_order ASC, a.create_time DESC
     </select>
