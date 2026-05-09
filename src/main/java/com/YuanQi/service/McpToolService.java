@@ -1,6 +1,7 @@
 package com.YuanQi.service;
 
 import com.YuanQi.pojo.McpTool;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -14,6 +15,11 @@ public interface McpToolService extends IService<McpTool> {
      * 获取启用的工具列表
      */
     List<McpTool> getEnabledTools();
+
+    /**
+     * 分页获取所有工具列表（管理员）
+     */
+    IPage<McpTool> pageList(Integer page, Integer size);
 
     /**
      * 更新工具状态

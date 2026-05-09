@@ -36,8 +36,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/captcha/**",
                         "/file/**",
                         "/error",
-                        "/message/stream",  // SSE接口在Controller中手动校验
-                        "/relay/call"       // API中转调用接口（API Key验证）
+                        "/message/stream",          // SSE接口在Controller中手动校验
+                        "/admin/system-chat/chat",  // 系统问答SSE接口在Controller中手动校验
+                        "/relay/call"               // API中转调用接口（API Key验证）
                 );
 
         // Sa-Token拦截器2：开启注解鉴权（@SaCheckRole, @SaCheckPermission等）

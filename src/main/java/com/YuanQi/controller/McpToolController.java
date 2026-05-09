@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.YuanQi.pojo.McpTool;
 import com.YuanQi.service.McpToolService;
 import com.YuanQi.utils.Result;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -30,12 +31,14 @@ public class McpToolController {
     }
 
     /**
-     * 获取所有工具列表（管理员）
+     * 分页获取所有工具列表（管理员）
      */
     @SaCheckRole("admin")
     @GetMapping("/list")
-    public Result<List<McpTool>> getAllTools() {
-        List<McpTool> tools = mcpToolService.list();
+    public Result<IPage<McpTool>> getAllTools(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        IPage<McpTool> tools = mcpToolService.pageList(page, size);
         return Result.success(tools);
     }
 

@@ -4,6 +4,8 @@ import com.YuanQi.mapper.McpToolMapper;
 import com.YuanQi.pojo.McpTool;
 import com.YuanQi.service.McpToolService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,16 @@ public class McpToolServiceImpl extends ServiceImpl<McpToolMapper, McpTool> impl
     public List<McpTool> getEnabledTools() {
         return list(new LambdaQueryWrapper<McpTool>()
                 .eq(McpTool::getEnabled, 1)
+                .orderByAsc(McpTool::getSortOrder));
+    }
+
+    /**
+     * 分页获取所有工具列表（管理员）
+     */
+    @Override
+    public IPage<McpTool> pageList(Integer page, Integer size) {
+        Page<McpTool> pageParam = new Page<>(page, size);
+        return page(pageParam, new LambdaQueryWrapper<McpTool>()
                 .orderByAsc(McpTool::getSortOrder));
     }
 

@@ -248,3 +248,24 @@ CREATE TABLE IF NOT EXISTS api_relay_log
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='API中转调用记录表';
+
+-- 系统问答日志表（管理后台RAG问答）
+CREATE TABLE IF NOT EXISTS system_chat_log
+(
+    id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    admin_id     BIGINT       NOT NULL COMMENT '管理员ID',
+    role         VARCHAR(20)  NOT NULL COMMENT '角色：user-用户 assistant-助手',
+    content      TEXT         NOT NULL COMMENT '消息内容',
+    image_url    VARCHAR(500)          DEFAULT NULL COMMENT '图片URL（带图提问时）',
+    model_used   VARCHAR(50)           DEFAULT NULL COMMENT '使用的模型',
+    input_tokens INT                   DEFAULT NULL COMMENT '输入Token',
+    output_tokens INT                  DEFAULT NULL COMMENT '输出Token',
+    deleted      TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    INDEX idx_admin_id (admin_id),
+    INDEX idx_create_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='系统问答日志表';

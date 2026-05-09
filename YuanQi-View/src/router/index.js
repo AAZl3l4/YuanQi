@@ -131,6 +131,12 @@ const routes = [
         name: 'AdminUsage',
         component: () => import('@/views/admin/UsageManageView.vue'),
         meta: { requiresAdmin: true }
+      },
+      {
+        path: 'admin/system-chat',
+        name: 'AdminSystemChat',
+        component: () => import('@/views/admin/SystemChatView.vue'),
+        meta: { requiresAdmin: true }
       }
     ]
   },

@@ -46,6 +46,7 @@ const adminItems = computed(() => {
   if (!userStore.isAdmin) return []
   return [
     { path: '/admin/user', icon: 'User', label: '用户管理' },
+    { path: '/admin/system-chat', icon: 'DataAnalysis', label: '系统问答' },
     { path: '/admin/mcp', icon: 'Tools', label: 'MCP工具' },
     { path: '/admin/agent', icon: 'UserFilled', label: '智能体管理' },
     { path: '/admin/knowledge', icon: 'Collection', label: '知识库管理' },
