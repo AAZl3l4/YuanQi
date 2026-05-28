@@ -65,4 +65,27 @@
             GROUP BY NULL
         </if>
     </select>
+
+    <!-- 查询活跃用户数 -->
+    <select id="selectActiveUserCount" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT user_id) FROM (
+            SELECT cs.user_id FROM chat_session cs
+            WHERE cs.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(cs.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+            UNION
+            SELECT gc.user_id FROM ai_generated_content gc
+            WHERE gc.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(gc.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+            UNION
+            SELECT rl.user_id FROM api_relay_log rl
+            WHERE rl.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(rl.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+        ) AS active_users
+    </select>
 </mapper>

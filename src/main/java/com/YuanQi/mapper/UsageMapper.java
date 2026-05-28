@@ -21,4 +21,12 @@ public interface UsageMapper {
     UsageVO selectUsage(@Param("userId") Long userId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+    /**
+     * 查询活跃用户数（当天有聊天/生成/中转操作的用户）
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     */
+    Long selectActiveUserCount(@Param("startDate") LocalDate startDate,
+                               @Param("endDate") LocalDate endDate);
 }

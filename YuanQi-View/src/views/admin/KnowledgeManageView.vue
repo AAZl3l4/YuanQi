@@ -71,6 +71,20 @@ const getDownloadUrl = (url) => {
   return url
 }
 
+const getStatusType = (status) => {
+  const s = Number(status)
+  if (s === 1) return 'success'
+  if (s === 2) return 'danger'
+  return 'info'
+}
+
+const getStatusText = (status) => {
+  const s = Number(status)
+  if (s === 1) return '可用'
+  if (s === 2) return '失败'
+  return '处理中'
+}
+
 onMounted(() => {
   loadKnowledge()
 })
@@ -119,8 +133,8 @@ onMounted(() => {
       <el-table-column prop="chunkCount" label="分块数" width="100" />
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'">
-            {{ row.status === 1 ? '可用' : '处理中' }}
+          <el-tag :type="getStatusType(row.status)">
+            {{ getStatusText(row.status) }}
           </el-tag>
         </template>
       </el-table-column>

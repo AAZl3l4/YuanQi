@@ -60,27 +60,30 @@ public class SystemChatServiceImpl implements SystemChatService {
             1. queryUserStats - 查询用户统计
                - type参数: total(总用户数)、new(今日/本周/本月新增)、role(角色分布)、status(状态分布)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            2. queryUsageStats - 查询用量统计
+            2. queryActiveUserStats - 查询活跃用户统计（活跃用户指当天有聊天/生成/中转操作的用户）
+               - period参数: yesterday(昨日日活)、today(今日日活)、week(本周活跃)、month(本月活跃)、all(全部活跃统计)
+               - 如果不确定查询类型，不传参数，会返回全部统计数据
+            3. queryUsageStats - 查询用量统计
                - period参数: today(今日)、week(本周)、month(本月)、total(总计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            3. queryKnowledgeBaseStats - 查询知识库统计
+            4. queryKnowledgeBaseStats - 查询知识库统计
                - type参数: total(总数)、status(状态分布)、new(新增统计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            4. queryAgentStats - 查询智能体统计
+            5. queryAgentStats - 查询智能体统计
                - type参数: total(总数)、public(公开/私有分布)、new(新增统计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            5. queryApiKeyStats - 查询API Key统计
+            6. queryApiKeyStats - 查询API Key统计
                - type参数: total(总数)、status(状态分布)、new(新增统计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            6. queryRelayConfigStats - 查询API中转配置统计
+            7. queryRelayConfigStats - 查询API中转配置统计
                - type参数: total(总数)、public(公开/私有分布)、new(新增统计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            7. queryRelayLogStats - 查询API中转调用记录统计
+            8. queryRelayLogStats - 查询API中转调用记录统计
                - period参数: today(今日)、week(本周)、month(本月)、total(总计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
-            8. queryMcpToolStats - 查询MCP工具状态
-            9. toggleMcpTool - 启用/禁用MCP工具（这是唯一允许的操作）
-            10. queryGeneratedContentStats - 查询生成内容统计
+            9. queryMcpToolStats - 查询MCP工具状态
+            10. toggleMcpTool - 启用/禁用MCP工具（这是唯一允许的操作）
+            11. queryGeneratedContentStats - 查询生成内容统计
                - period参数: today(今日)、week(本周)、month(本月)、total(总计)、all(全部统计)
                - 如果不确定查询类型，不传参数，会返回全部统计数据
 

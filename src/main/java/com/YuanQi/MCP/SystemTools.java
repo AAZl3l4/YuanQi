@@ -113,6 +113,71 @@ public class SystemTools {
     }
 
     /**
+     * 查询活跃用户统计
+     */
+    @Tool(description = "查询活跃用户统计数据。当管理员询问活跃用户数、DAU、用户活跃度等问题时调用此工具。" +
+            "活跃用户指当天有聊天、生成内容、API中转等操作的用户。" +
+            "支持查询：昨日日活、今日日活、本周活跃、本月活跃、全部活跃统计。" +
+            "如果不确定具体查询类型，直接调用此工具不传入参数，会返回全部统计数据。")
+    public String queryActiveUserStats(
+            @ToolParam(description = "时间范围：yesterday-昨日 today-今日 week-本周 month-本月 all-全部活跃统计。如果不确定，不传此参数", required = false) String period) {
+        log.debug("查询活跃用户统计，时间范围: {}", period);
+        try {
+            Map<String, Object> result = new HashMap<>();
+
+            boolean returnAll = period == null || period.isEmpty() || "all".equals(period);
+
+            if (returnAll) {
+                result.putAll(getActiveUserByPeriod("昨日", LocalDate.now().minusDays(1), LocalDate.now().minusDays(1)));
+                result.putAll(getActiveUserByPeriod("今日", LocalDate.now(), LocalDate.now()));
+                result.putAll(getActiveUserByPeriod("本周", LocalDate.now().minusDays(7), LocalDate.now()));
+                result.putAll(getActiveUserByPeriod("本月", LocalDate.now().minusMonths(1), LocalDate.now()));
+            } else {
+                LocalDate startDate = null;
+                LocalDate endDate = null;
+                String periodName = "今日";
+
+                if ("yesterday".equals(period)) {
+                    startDate = LocalDate.now().minusDays(1);
+                    endDate = LocalDate.now().minusDays(1);
+                    periodName = "昨日";
+                } else if ("today".equals(period)) {
+                    startDate = LocalDate.now();
+                    endDate = LocalDate.now();
+                    periodName = "今日";
+                } else if ("week".equals(period)) {
+                    startDate = LocalDate.now().minusDays(7);
+                    endDate = LocalDate.now();
+                    periodName = "本周";
+                } else if ("month".equals(period)) {
+                    startDate = LocalDate.now().minusMonths(1);
+                    endDate = LocalDate.now();
+                    periodName = "本月";
+                }
+
+                result.putAll(getActiveUserByPeriod(periodName, startDate, endDate));
+            }
+
+            return formatResult("活跃用户统计", result);
+        } catch (Exception e) {
+            log.error("查询活跃用户统计失败", e);
+            return "查询失败: " + e.getMessage();
+        }
+    }
+
+    private Map<String, Object> getActiveUserByPeriod(String prefix, LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> result = new HashMap<>();
+        Long activeCount = usageMapper.selectActiveUserCount(startDate, endDate);
+        Long totalUsers = userMapper.selectCount(
+                new LambdaQueryWrapper<User>()
+                        .eq(User::getDeleted, 0));
+        double activeRate = totalUsers > 0 ? (double) activeCount / totalUsers * 100 : 0;
+        result.put(prefix + "活跃用户", activeCount);
+        result.put(prefix + "活跃率", String.format("%.1f%%", activeRate));
+        return result;
+    }
+
+    /**
      * 查询用量统计
      */
     @Tool(description = "查询系统用量统计数据。当管理员询问Token消耗、API调用次数、用量趋势等问题时调用此工具。" +

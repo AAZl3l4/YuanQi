@@ -175,6 +175,20 @@ const getDownloadUrl = (url) => {
   return url
 }
 
+const getStatusType = (status) => {
+  const s = Number(status)
+  if (s === 1) return 'success'
+  if (s === 2) return 'danger'
+  return 'info'
+}
+
+const getStatusText = (status) => {
+  const s = Number(status)
+  if (s === 1) return '可用'
+  if (s === 2) return '失败'
+  return '处理中'
+}
+
 onMounted(() => {
   loadKnowledge()
 })
@@ -234,8 +248,8 @@ onMounted(() => {
           </div>
           <div class="card-meta">
             <span>分块: {{ kb.chunkCount || 0 }}</span>
-            <el-tag :type="kb.status === 1 ? 'success' : 'info'" size="small">
-              {{ kb.status === 1 ? '可用' : '处理中' }}
+            <el-tag :type="getStatusType(kb.status)" size="small">
+              {{ getStatusText(kb.status) }}
             </el-tag>
           </div>
         </div>
