@@ -99,16 +99,17 @@ public class SystemChatServiceImpl implements SystemChatService {
             1. 用 [CHART] 和 [/CHART] 包裹ECharts option JSON
             2. 根据数据特点选择合适的图表类型：
                - 对比数据（如各类数量对比）→ 柱状图(bar)
-               - 趋势数据（如时间变化）→ 折线图(line)
+               - 每日明细/趋势数据（如每日新增、每日活跃）→ 折线图(line)
                - 占比/分布（如角色分布、状态分布）→ 饼图(pie)
-            3. 图表配置示例：
+            3. 当工具返回了"每日明细"数据时，必须用折线图展示趋势，将每日数据作为xAxis和series.data
+            4. 图表配置示例：
             [CHART]
-            {"title":{"text":"用户统计","left":"center"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["总用户","今日新增","本周新增"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[120,5,23]}]}
+            {"title":{"text":"本周新增用户趋势","left":"center"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["05-01","05-02","05-03"]},"yAxis":{"type":"value"},"series":[{"type":"line","data":[3,5,2],"smooth":true}]}
             [/CHART]
-            4. 每次回答最多生成1个图表
-            5. 图表配置必须是合法的JSON，不要有多余注释或尾随逗号
-            6. 饼图数据格式：series[0].data 为 [{"name":"xxx","value":123}] 数组
-            7. 图表要紧凑简洁，不要过于复杂
+            5. 每次回答最多生成1个图表
+            6. 图表配置必须是合法的JSON，不要有多余注释或尾随逗号
+            7. 饼图数据格式：series[0].data 为 [{"name":"xxx","value":123}] 数组
+            8. 图表要紧凑简洁，不要过于复杂
             """;
 
     /**

@@ -88,4 +88,54 @@
             </if>
         ) AS active_users
     </select>
+
+    <!-- 按天统计数量（白名单表名，防SQL注入） -->
+    <select id="selectDailyCount" resultType="com.YuanQi.pojo.vo.DailyCountVO">
+        SELECT DATE(create_time) as date, COUNT(*) as count FROM
+        <choose>
+            <when test="tableName == 'sys_user'">sys_user</when>
+            <when test="tableName == 'knowledge_base'">knowledge_base</when>
+            <when test="tableName == 'agent'">agent</when>
+            <when test="tableName == 'api_key'">api_key</when>
+            <when test="tableName == 'api_relay_config'">api_relay_config</when>
+            <when test="tableName == 'chat_session'">chat_session</when>
+            <when test="tableName == 'api_relay_log'">api_relay_log</when>
+            <when test="tableName == 'ai_generated_content'">ai_generated_content</when>
+            <otherwise>sys_user</otherwise>
+        </choose>
+        WHERE deleted = 0
+        <if test="startDate != null and endDate != null">
+            AND DATE(create_time) BETWEEN #{startDate} AND #{endDate}
+        </if>
+        GROUP BY DATE(create_time)
+        ORDER BY date
+    </select>
+
+    <!-- 按天统计活跃用户数 -->
+    <select id="selectDailyActiveUsers" resultType="com.YuanQi.pojo.vo.DailyCountVO">
+        SELECT date, COUNT(*) as count FROM (
+            SELECT cs.user_id, DATE(cs.create_time) as date FROM chat_session cs
+            WHERE cs.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(cs.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+            UNION
+            SELECT gc.user_id, DATE(gc.create_time) as date FROM ai_generated_content gc
+            WHERE gc.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(gc.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+            UNION
+            SELECT rl.user_id, DATE(rl.create_time) as date FROM api_relay_log rl
+            WHERE rl.deleted = 0
+            <if test="startDate != null and endDate != null">
+                AND DATE(rl.create_time) BETWEEN #{startDate} AND #{endDate}
+            </if>
+        ) AS active_users
+        <if test="startDate != null and endDate != null">
+            WHERE date BETWEEN #{startDate} AND #{endDate}
+        </if>
+        GROUP BY date
+        ORDER BY date
+    </select>
 </mapper>

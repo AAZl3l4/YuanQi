@@ -131,7 +131,7 @@ onBeforeUnmount(() => {
           v-for="(col, idx) in tableInfo.columns"
           :key="idx"
           :label="col"
-          :prop="col === '名称' || col === '类别' ? 'name' || 'category' : 'value'"
+          :prop="idx === 0 ? (col === '类别' ? 'category' : 'name') : 'value'"
         >
           <template #default="{ row }">
             {{ idx === 0 ? (row.name || row.category) : row.value }}

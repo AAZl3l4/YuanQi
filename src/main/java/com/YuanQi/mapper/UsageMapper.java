@@ -1,10 +1,12 @@
 package com.YuanQi.mapper;
 
+import com.YuanQi.pojo.vo.DailyCountVO;
 import com.YuanQi.pojo.vo.UsageVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 用量统计Mapper
@@ -29,4 +31,17 @@ public interface UsageMapper {
      */
     Long selectActiveUserCount(@Param("startDate") LocalDate startDate,
                                @Param("endDate") LocalDate endDate);
+
+    /**
+     * 按天统计数量（白名单表名，防SQL注入）
+     */
+    List<DailyCountVO> selectDailyCount(@Param("tableName") String tableName,
+                                        @Param("startDate") LocalDate startDate,
+                                        @Param("endDate") LocalDate endDate);
+
+    /**
+     * 按天统计活跃用户数
+     */
+    List<DailyCountVO> selectDailyActiveUsers(@Param("startDate") LocalDate startDate,
+                                              @Param("endDate") LocalDate endDate);
 }

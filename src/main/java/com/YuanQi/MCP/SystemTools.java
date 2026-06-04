@@ -2,6 +2,7 @@ package com.YuanQi.MCP;
 
 import com.YuanQi.mapper.*;
 import com.YuanQi.pojo.*;
+import com.YuanQi.pojo.vo.DailyCountVO;
 import com.YuanQi.pojo.vo.UsageVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -12,6 +13,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +107,14 @@ public class SystemTools {
                 result.put("禁用用户", disabledCount);
             }
 
-            return formatResult("用户统计", result);
+            // 每日明细
+            String dailyDetail = "";
+            if (returnAll || "new".equals(type)) {
+                dailyDetail = getDailyDetail("本周新增用户", "sys_user", LocalDate.now().minusDays(7), LocalDate.now())
+                        + getDailyDetail("本月新增用户", "sys_user", LocalDate.now().minusMonths(1), LocalDate.now());
+            }
+
+            return formatResult("用户统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询用户统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -158,7 +167,11 @@ public class SystemTools {
                 result.putAll(getActiveUserByPeriod(periodName, startDate, endDate));
             }
 
-            return formatResult("活跃用户统计", result);
+            // 每日活跃明细
+            String dailyDetail = getDailyActiveDetail("本周活跃用户", LocalDate.now().minusDays(7), LocalDate.now())
+                    + getDailyActiveDetail("本月活跃用户", LocalDate.now().minusMonths(1), LocalDate.now());
+
+            return formatResult("活跃用户统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询活跃用户统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -216,7 +229,13 @@ public class SystemTools {
                 result.putAll(getUsageByPeriod(periodName, startDate, LocalDate.now()));
             }
 
-            return formatResult("用量统计", result);
+            // 每日用量明细
+            String dailyDetail = getDailyDetail("本周聊天次数", "chat_session", LocalDate.now().minusDays(7), LocalDate.now())
+                    + getDailyDetail("本周API中转次数", "api_relay_log", LocalDate.now().minusDays(7), LocalDate.now())
+                    + getDailyDetail("本月聊天次数", "chat_session", LocalDate.now().minusMonths(1), LocalDate.now())
+                    + getDailyDetail("本月API中转次数", "api_relay_log", LocalDate.now().minusMonths(1), LocalDate.now());
+
+            return formatResult("用量统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询用量统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -300,7 +319,14 @@ public class SystemTools {
                 result.put("本月新增", monthCount);
             }
 
-            return formatResult("知识库统计", result);
+            // 每日明细
+            String dailyDetail = "";
+            if (returnAll || "new".equals(type)) {
+                dailyDetail = getDailyDetail("本周新增知识库", "knowledge_base", LocalDate.now().minusDays(7), LocalDate.now())
+                        + getDailyDetail("本月新增知识库", "knowledge_base", LocalDate.now().minusMonths(1), LocalDate.now());
+            }
+
+            return formatResult("知识库统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询知识库统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -363,7 +389,14 @@ public class SystemTools {
                 result.put("本月新增", monthCount);
             }
 
-            return formatResult("智能体统计", result);
+            // 每日明细
+            String dailyDetail = "";
+            if (returnAll || "new".equals(type)) {
+                dailyDetail = getDailyDetail("本周新增智能体", "agent", LocalDate.now().minusDays(7), LocalDate.now())
+                        + getDailyDetail("本月新增智能体", "agent", LocalDate.now().minusMonths(1), LocalDate.now());
+            }
+
+            return formatResult("智能体统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询智能体统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -426,7 +459,14 @@ public class SystemTools {
                 result.put("本月新增", monthCount);
             }
 
-            return formatResult("API Key统计", result);
+            // 每日明细
+            String dailyDetail = "";
+            if (returnAll || "new".equals(type)) {
+                dailyDetail = getDailyDetail("本周新增API Key", "api_key", LocalDate.now().minusDays(7), LocalDate.now())
+                        + getDailyDetail("本月新增API Key", "api_key", LocalDate.now().minusMonths(1), LocalDate.now());
+            }
+
+            return formatResult("API Key统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询API Key统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -489,7 +529,14 @@ public class SystemTools {
                 result.put("本月新增", monthCount);
             }
 
-            return formatResult("API中转配置统计", result);
+            // 每日明细
+            String dailyDetail = "";
+            if (returnAll || "new".equals(type)) {
+                dailyDetail = getDailyDetail("本周新增中转配置", "api_relay_config", LocalDate.now().minusDays(7), LocalDate.now())
+                        + getDailyDetail("本月新增中转配置", "api_relay_config", LocalDate.now().minusMonths(1), LocalDate.now());
+            }
+
+            return formatResult("API中转配置统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询API中转配置统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -534,7 +581,11 @@ public class SystemTools {
                 result.putAll(getRelayLogStatsByPeriod(periodName, startDate));
             }
 
-            return formatResult("API中转调用统计", result);
+            // 每日调用明细
+            String dailyDetail = getDailyDetail("本周API调用", "api_relay_log", LocalDate.now().minusDays(7), LocalDate.now())
+                    + getDailyDetail("本月API调用", "api_relay_log", LocalDate.now().minusMonths(1), LocalDate.now());
+
+            return formatResult("API中转调用统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询API中转调用记录统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -675,7 +726,11 @@ public class SystemTools {
                 result.putAll(getContentStatsByPeriod(periodName, startDate));
             }
 
-            return formatResult("生成内容统计", result);
+            // 每日生成明细
+            String dailyDetail = getDailyDetail("本周生成内容", "ai_generated_content", LocalDate.now().minusDays(7), LocalDate.now())
+                    + getDailyDetail("本月生成内容", "ai_generated_content", LocalDate.now().minusMonths(1), LocalDate.now());
+
+            return formatResult("生成内容统计", result) + dailyDetail;
         } catch (Exception e) {
             log.error("查询生成内容统计失败", e);
             return "查询失败: " + e.getMessage();
@@ -715,5 +770,38 @@ public class SystemTools {
         StringBuilder sb = new StringBuilder("【").append(title).append("】\n\n");
         data.forEach((key, value) -> sb.append("- ").append(key).append(": ").append(value).append("\n"));
         return sb.toString();
+    }
+
+    /**
+     * 格式化每日明细数据
+     */
+    private String formatDailyDetail(String prefix, List<DailyCountVO> dailyData) {
+        if (dailyData == null || dailyData.isEmpty()) {
+            return prefix + "每日明细: 无数据\n";
+        }
+        StringBuilder sb = new StringBuilder();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
+        sb.append(prefix).append("每日明细: ");
+        for (DailyCountVO d : dailyData) {
+            sb.append(d.getDate().format(fmt)).append("(").append(d.getCount()).append(") ");
+        }
+        sb.append("\n");
+        return sb.toString();
+    }
+
+    /**
+     * 查询每日明细并格式化
+     */
+    private String getDailyDetail(String prefix, String tableName, LocalDate startDate, LocalDate endDate) {
+        List<DailyCountVO> dailyData = usageMapper.selectDailyCount(tableName, startDate, endDate);
+        return formatDailyDetail(prefix, dailyData);
+    }
+
+    /**
+     * 查询每日活跃用户明细并格式化
+     */
+    private String getDailyActiveDetail(String prefix, LocalDate startDate, LocalDate endDate) {
+        List<DailyCountVO> dailyData = usageMapper.selectDailyActiveUsers(startDate, endDate);
+        return formatDailyDetail(prefix, dailyData);
     }
 }
