@@ -3,6 +3,7 @@ import { ref, nextTick, onMounted } from 'vue'
 import { streamSystemChat, getSystemChatHistory, clearSystemChatHistory } from '@/api/systemChat'
 import { renderMarkdown } from '@/utils/markdown'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ChartCard from '@/components/common/ChartCard.vue'
 
 const messages = ref([])
 const inputMessage = ref('')
@@ -208,6 +209,42 @@ const renderContent = (content) => {
   return renderMarkdown(content || '')
 }
 
+// 解析消息中的图表块，返回 [{type:'text',content}, {type:'chart',config}, ...]
+const parseMessageContent = (content) => {
+  if (!content) return []
+  const parts = []
+  const regex = /\[CHART\]([\s\S]*?)\[\/CHART\]/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      const text = content.substring(lastIndex, match.index).trim()
+      if (text) parts.push({ type: 'text', content: text })
+    }
+    try {
+      const config = JSON.parse(match[1].trim())
+      parts.push({ type: 'chart', config })
+    } catch (e) {
+      parts.push({ type: 'text', content: match[0] })
+    }
+    lastIndex = match.index + match[0].length
+  }
+
+  if (lastIndex < content.length) {
+    const text = content.substring(lastIndex).trim()
+    if (text) parts.push({ type: 'text', content: text })
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', content }]
+}
+
+// 流式输出时隐藏图表标记
+const renderStreamingContent = (content) => {
+  const cleaned = (content || '').replace(/\[CHART\][\s\S]*?(?:\[\/CHART\]|$)/g, '')
+  return renderMarkdown(cleaned)
+}
+
 onMounted(() => {
   loadHistory()
   randomSuggestions()
@@ -296,7 +333,10 @@ onMounted(() => {
               <div v-if="msg.imageUrl" class="message-image">
                 <el-image :src="msg.imageUrl" fit="contain" :preview-src-list="[msg.imageUrl]" />
               </div>
-              <div class="message-text" v-html="renderContent(msg.content)" />
+              <template v-for="(part, pIdx) in parseMessageContent(msg.content)" :key="pIdx">
+                <div v-if="part.type === 'text'" class="message-text" v-html="renderContent(part.content)" />
+                <ChartCard v-else-if="part.type === 'chart'" :option="part.config" />
+              </template>
             </div>
           </div>
 
@@ -305,7 +345,7 @@ onMounted(() => {
               <el-avatar :size="36" class="avatar-ai" :src="'/logo.png'" />
             </div>
             <div class="message-content">
-              <div class="message-text streaming" v-html="renderContent(streamingContent)" />
+              <div class="message-text streaming" v-html="renderStreamingContent(streamingContent)" />
               <div v-if="!streamingContent" class="streaming-indicator">
                 <span class="dot"></span>
                 <span class="dot"></span>

@@ -93,6 +93,22 @@ public class SystemChatServiceImpl implements SystemChatService {
             3. 如果管理员要求启用/禁用工具，先确认意图后再执行
             4. 不要编造数据，所有数据都来自工具查询结果
             5. 当用户的问题不明确具体统计类型时（如"最近的情况怎么样"），直接调用相关工具不传入参数，获取全部数据后自行分析回答
+
+            图表生成规则：
+            当你查询到统计数据时，除了用文字描述数据，还要生成ECharts图表配置：
+            1. 用 [CHART] 和 [/CHART] 包裹ECharts option JSON
+            2. 根据数据特点选择合适的图表类型：
+               - 对比数据（如各类数量对比）→ 柱状图(bar)
+               - 趋势数据（如时间变化）→ 折线图(line)
+               - 占比/分布（如角色分布、状态分布）→ 饼图(pie)
+            3. 图表配置示例：
+            [CHART]
+            {"title":{"text":"用户统计","left":"center"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["总用户","今日新增","本周新增"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[120,5,23]}]}
+            [/CHART]
+            4. 每次回答最多生成1个图表
+            5. 图表配置必须是合法的JSON，不要有多余注释或尾随逗号
+            6. 饼图数据格式：series[0].data 为 [{"name":"xxx","value":123}] 数组
+            7. 图表要紧凑简洁，不要过于复杂
             """;
 
     /**
