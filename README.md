@@ -134,3 +134,5 @@ YuanQi/
 ---
 
 > 练手即问道，小成亦星辰。
+
+QQ群：[![加入QQ群](https://img.shields.io/badge/883640898-blue.svg)]()
