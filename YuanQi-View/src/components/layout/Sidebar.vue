@@ -36,7 +36,8 @@ const menuItems = computed(() => {
     { path: '/content', icon: 'Picture', label: '生成中心' },
     { path: '/usage', icon: 'DataLine', label: '用量统计' },
     { path: '/relay-config', icon: 'Connection', label: '中转配置' },
-    { path: '/api-key', icon: 'Key', label: 'API Key' }
+    { path: '/api-key', icon: 'Key', label: 'API Key' },
+    { path: '/sponsor', icon: 'Trophy', label: '赞助榜单' }
   ]
   
   return items
@@ -47,11 +48,12 @@ const adminItems = computed(() => {
   return [
     { path: '/admin/user', icon: 'User', label: '用户管理' },
     { path: '/admin/system-chat', icon: 'DataAnalysis', label: '系统问答' },
+    { path: '/admin/relay-logs', icon: 'DataLine', label: '调用记录' },
+    { path: '/admin/sponsor', icon: 'Trophy', label: '赞助管理' },
     { path: '/admin/mcp', icon: 'Tools', label: 'MCP工具' },
     { path: '/admin/agent', icon: 'UserFilled', label: '智能体管理' },
     { path: '/admin/knowledge', icon: 'Collection', label: '知识库管理' },
     { path: '/admin/relay-config', icon: 'Connection', label: '中转配置' },
-    { path: '/admin/relay-logs', icon: 'DataLine', label: '调用记录' },
     { path: '/admin/content', icon: 'Picture', label: '生成记录' },
     { path: '/admin/usage', icon: 'DataLine', label: '用量统计' }
   ]
