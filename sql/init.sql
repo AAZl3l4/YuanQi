@@ -269,3 +269,20 @@ CREATE TABLE IF NOT EXISTS system_chat_log
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='系统问答日志表';
+
+-- 赞助记录表
+CREATE TABLE IF NOT EXISTS sponsor_record
+(
+    id          BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    name        VARCHAR(50)   NOT NULL COMMENT '赞助者名称',
+    ad_content  VARCHAR(200)           DEFAULT NULL COMMENT '广告位展示内容',
+    amount      DECIMAL(10,2) NOT NULL COMMENT '赞助金额(元)',
+    remark      VARCHAR(500)           DEFAULT NULL COMMENT '备注',
+    deleted     TINYINT       NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    create_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    INDEX idx_amount (amount DESC)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT ='赞助记录表';

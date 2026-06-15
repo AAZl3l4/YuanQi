@@ -79,6 +79,11 @@ const routes = [
         component: () => import('@/views/relay-config/RelayConfigView.vue')
       },
       {
+        path: 'sponsor',
+        name: 'Sponsor',
+        component: () => import('@/views/sponsor/SponsorView.vue')
+      },
+      {
         path: 'admin/user',
         name: 'AdminUser',
         component: () => import('@/views/admin/UserManageView.vue'),
@@ -136,6 +141,12 @@ const routes = [
         path: 'admin/system-chat',
         name: 'AdminSystemChat',
         component: () => import('@/views/admin/SystemChatView.vue'),
+        meta: { requiresAdmin: true }
+      },
+      {
+        path: 'admin/sponsor',
+        name: 'AdminSponsor',
+        component: () => import('@/views/admin/SponsorManageView.vue'),
         meta: { requiresAdmin: true }
       }
     ]
